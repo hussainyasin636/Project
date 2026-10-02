@@ -11,11 +11,13 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useProjectDialogs } from "@/hooks/use-project-dialogs"
+import { cn } from "@/lib/utils"
 
 export function ProjectDialogs() {
   const {
     dialogState,
     formState,
+    slugValidation,
     isLoading,
     closeDialog,
     setFormName,
@@ -54,14 +56,31 @@ export function ProjectDialogs() {
                 value={formState.name}
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="e.g. Real-Time Chat Engine"
+                aria-invalid={Boolean(slugValidation.error)}
                 autoFocus
               />
-              <p className="text-xs text-text-muted">
-                Slug preview:{" "}
-                <span className="font-mono text-accent-primary">
-                  {formState.slug || "project-slug"}
-                </span>
-              </p>
+
+              <div className="flex flex-col gap-1 pt-0.5">
+                <p className="text-xs text-text-muted">
+                  Slug preview:{" "}
+                  <span
+                    className={cn(
+                      "font-mono",
+                      slugValidation.error
+                        ? "text-state-error"
+                        : "text-accent-primary"
+                    )}
+                  >
+                    {formState.slug || "project-slug"}
+                  </span>
+                </p>
+
+                {slugValidation.error && (
+                  <p className="text-xs text-state-error" role="alert">
+                    {slugValidation.error}
+                  </p>
+                )}
+              </div>
             </div>
 
             <DialogFooter>
@@ -75,7 +94,7 @@ export function ProjectDialogs() {
               </Button>
               <Button
                 type="submit"
-                disabled={!formState.name.trim() || isLoading}
+                disabled={!slugValidation.isValid || isLoading}
               >
                 {isLoading ? "Creating..." : "Create Project"}
               </Button>
@@ -112,8 +131,31 @@ export function ProjectDialogs() {
                 value={formState.name}
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Project name"
+                aria-invalid={Boolean(slugValidation.error)}
                 autoFocus
               />
+
+              <div className="flex flex-col gap-1 pt-0.5">
+                <p className="text-xs text-text-muted">
+                  Slug preview:{" "}
+                  <span
+                    className={cn(
+                      "font-mono",
+                      slugValidation.error
+                        ? "text-state-error"
+                        : "text-accent-primary"
+                    )}
+                  >
+                    {formState.slug || "project-slug"}
+                  </span>
+                </p>
+
+                {slugValidation.error && (
+                  <p className="text-xs text-state-error" role="alert">
+                    {slugValidation.error}
+                  </p>
+                )}
+              </div>
             </div>
 
             <DialogFooter>
@@ -127,7 +169,7 @@ export function ProjectDialogs() {
               </Button>
               <Button
                 type="submit"
-                disabled={!formState.name.trim() || isLoading}
+                disabled={!slugValidation.isValid || isLoading}
               >
                 {isLoading ? "Saving..." : "Rename"}
               </Button>

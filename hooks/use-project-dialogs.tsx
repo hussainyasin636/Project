@@ -1,16 +1,14 @@
 "use client"
 
-import React, { createContext, useContext, useState, useCallback } from "react"
+import React, { createContext, useContext, useState, useCallback, useMemo } from "react"
 import { INITIAL_MOCK_PROJECTS, type Project } from "@/types/project"
+import {
+  generateSlug,
+  validateSlug,
+  type SlugValidationResult,
+} from "@/lib/slug"
 
-export function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-}
+export { generateSlug, validateSlug, type SlugValidationResult }
 
 export type DialogType = "create" | "rename" | "delete" | null
 
@@ -27,6 +25,7 @@ export interface ProjectFormState {
 export interface ProjectDialogsContextType {
   dialogState: ProjectDialogState
   formState: ProjectFormState
+  slugValidation: SlugValidationResult
   isLoading: boolean
   projects: Project[]
   openCreateDialog: () => void
@@ -80,20 +79,36 @@ export function useProjectDialogsState(initialProjects: Project[] = INITIAL_MOCK
     })
   }, [])
 
+  // Exclude current project from duplicate check during rename
+  const existingSlugs = useMemo(() => {
+    if (dialogState.type === "rename" && dialogState.project) {
+      const currentId = dialogState.project.id
+      return projects.filter((p) => p.id !== currentId).map((p) => p.slug)
+    }
+    return projects.map((p) => p.slug)
+  }, [projects, dialogState.type, dialogState.project])
+
+  // Live slug validation based on current formState and existing slugs
+  const slugValidation = useMemo<SlugValidationResult>(() => {
+    if (!formState.name.trim()) {
+      return { isValid: false }
+    }
+    return validateSlug(formState.slug, existingSlugs)
+  }, [formState.name, formState.slug, existingSlugs])
+
   const handleCreateProject = useCallback(
     (e?: React.FormEvent) => {
       if (e) {
         e.preventDefault()
       }
-      const trimmedName = formState.name.trim()
-      if (!trimmedName) return
+      if (!slugValidation.isValid) return
 
+      const trimmedName = formState.name.trim()
       setIsLoading(true)
-      const generated = generateSlug(trimmedName) || "project"
       const newProject: Project = {
         id: `proj-${Date.now()}`,
         name: trimmedName,
-        slug: formState.slug || generated,
+        slug: formState.slug,
         isOwner: true,
         updatedAt: "Just now",
       }
@@ -102,7 +117,7 @@ export function useProjectDialogsState(initialProjects: Project[] = INITIAL_MOCK
       setIsLoading(false)
       closeDialog()
     },
-    [formState.name, formState.slug, closeDialog]
+    [formState.name, formState.slug, slugValidation.isValid, closeDialog]
   )
 
   const handleRenameProject = useCallback(
@@ -110,13 +125,12 @@ export function useProjectDialogsState(initialProjects: Project[] = INITIAL_MOCK
       if (e) {
         e.preventDefault()
       }
-      if (!dialogState.project) return
-      const trimmedName = formState.name.trim()
-      if (!trimmedName) return
+      if (!dialogState.project || !slugValidation.isValid) return
 
+      const trimmedName = formState.name.trim()
       setIsLoading(true)
       const targetId = dialogState.project.id
-      const newSlug = generateSlug(trimmedName) || "project"
+      const newSlug = formState.slug
 
       setProjects((prev) =>
         prev.map((p) =>
@@ -128,7 +142,7 @@ export function useProjectDialogsState(initialProjects: Project[] = INITIAL_MOCK
       setIsLoading(false)
       closeDialog()
     },
-    [dialogState.project, formState.name, closeDialog]
+    [dialogState.project, formState.name, formState.slug, slugValidation.isValid, closeDialog]
   )
 
   const handleDeleteProject = useCallback(() => {
@@ -144,6 +158,7 @@ export function useProjectDialogsState(initialProjects: Project[] = INITIAL_MOCK
   return {
     dialogState,
     formState,
+    slugValidation,
     isLoading,
     projects,
     openCreateDialog,
