@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Dialog,
@@ -7,11 +7,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useProjectDialogs } from "@/hooks/use-project-dialogs"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useProjectDialogs } from "@/hooks/use-project-dialogs";
+import { cn } from "@/lib/utils";
 
 export function ProjectDialogs() {
   const {
@@ -24,7 +24,7 @@ export function ProjectDialogs() {
     handleCreateProject,
     handleRenameProject,
     handleDeleteProject,
-  } = useProjectDialogs()
+  } = useProjectDialogs();
 
   return (
     <>
@@ -32,7 +32,7 @@ export function ProjectDialogs() {
       <Dialog
         open={dialogState.type === "create"}
         onOpenChange={(open) => {
-          if (!open) closeDialog()
+          if (!open) closeDialog();
         }}
       >
         <DialogContent className="sm:max-w-md">
@@ -68,7 +68,7 @@ export function ProjectDialogs() {
                       "font-mono",
                       slugValidation.error
                         ? "text-state-error"
-                        : "text-accent-primary"
+                        : "text-accent-primary",
                     )}
                   >
                     {formState.slug || "project-slug"}
@@ -107,7 +107,7 @@ export function ProjectDialogs() {
       <Dialog
         open={dialogState.type === "rename"}
         onOpenChange={(open) => {
-          if (!open) closeDialog()
+          if (!open) closeDialog();
         }}
       >
         <DialogContent className="sm:max-w-md">
@@ -143,7 +143,7 @@ export function ProjectDialogs() {
                       "font-mono",
                       slugValidation.error
                         ? "text-state-error"
-                        : "text-accent-primary"
+                        : "text-accent-primary",
                     )}
                   >
                     {formState.slug || "project-slug"}
@@ -182,15 +182,15 @@ export function ProjectDialogs() {
       <Dialog
         open={dialogState.type === "delete"}
         onOpenChange={(open) => {
-          if (!open) closeDialog()
+          if (!open) closeDialog();
         }}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Project</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{dialogState.project?.name}&quot;?
-              This action cannot be undone.
+              Are you sure you want to delete &quot;{dialogState.project?.name}
+              &quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
@@ -215,5 +215,5 @@ export function ProjectDialogs() {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }
