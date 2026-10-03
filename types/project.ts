@@ -1,31 +1,18 @@
-export interface Project {
+export interface ProjectCollaborator {
   id: string
-  name: string
-  slug: string
-  isOwner: boolean
-  updatedAt: string
+  projectId: string
+  email: string
+  createdAt: string | Date
 }
 
-export const INITIAL_MOCK_PROJECTS: Project[] = [
-  {
-    id: "proj-1",
-    name: "E-Commerce Microservices",
-    slug: "e-commerce-microservices",
-    isOwner: true,
-    updatedAt: "2 hours ago",
-  },
-  {
-    id: "proj-2",
-    name: "Payment Gateway",
-    slug: "payment-gateway",
-    isOwner: true,
-    updatedAt: "Yesterday",
-  },
-  {
-    id: "proj-3",
-    name: "Real-time Analytics",
-    slug: "real-time-analytics",
-    isOwner: false,
-    updatedAt: "3 days ago",
-  },
-]
+export interface Project {
+  id: string
+  ownerId: string
+  name: string
+  description?: string | null
+  status: "DRAFT" | "ARCHIVED"
+  canvasJsonPath?: string | null
+  createdAt: string | Date
+  updatedAt: string | Date
+  collaborators?: ProjectCollaborator[]
+}

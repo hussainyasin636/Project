@@ -1,23 +1,32 @@
 "use client"
 
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { X, Plus, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { useProjectDialogs } from "@/hooks/use-project-dialogs"
+import { useProjectActions } from "@/hooks/use-project-actions"
 import { cn } from "@/lib/utils"
+import type { Project } from "@/types/project"
 
 interface ProjectSidebarProps {
   isOpen: boolean
   onClose: () => void
+  ownedProjects?: Project[]
+  sharedProjects?: Project[]
   className?: string
 }
 
-export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarProps) {
-  const { projects, openCreateDialog, openRenameDialog, openDeleteDialog } =
-    useProjectDialogs()
-
-  const ownedProjects = projects.filter((p) => p.isOwner)
-  const sharedProjects = projects.filter((p) => !p.isOwner)
+export function ProjectSidebar({
+  isOpen,
+  onClose,
+  ownedProjects = [],
+  sharedProjects = [],
+  className,
+}: ProjectSidebarProps) {
+  const pathname = usePathname()
+  const { openCreateDialog, openRenameDialog, openDeleteDialog } =
+    useProjectActions()
 
   return (
     <>
@@ -76,43 +85,70 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
                 </div>
               ) : (
                 <div className="flex flex-col gap-1">
-                  {ownedProjects.map((project) => (
-                    <div
-                      key={project.id}
-                      className="group flex items-center justify-between rounded-lg px-2.5 py-2 text-sm transition-colors hover:bg-bg-subtle"
-                    >
-                      <div className="flex min-w-0 flex-1 flex-col pr-2">
-                        <span className="truncate text-xs font-medium text-text-primary">
-                          {project.name}
-                        </span>
-                        <span className="truncate font-mono text-[11px] text-text-faint">
-                          /{project.slug}
-                        </span>
-                      </div>
+                  {ownedProjects.map((project) => {
+                    const isActive = pathname === `/editor/${project.id}`
+                    return (
+                      <div
+                        key={project.id}
+                        className={cn(
+                          "group flex items-center justify-between rounded-lg px-2.5 py-2 text-sm transition-colors",
+                          isActive
+                            ? "bg-bg-subtle border border-border-default shadow-xs"
+                            : "hover:bg-bg-subtle"
+                        )}
+                      >
+                        <Link
+                          href={`/editor/${project.id}`}
+                          className="flex min-w-0 flex-1 flex-col pr-2 hover:opacity-80 transition-opacity"
+                          onClick={onClose}
+                        >
+                          <span
+                            className={cn(
+                              "truncate text-xs font-medium",
+                              isActive ? "text-accent-primary" : "text-text-primary"
+                            )}
+                          >
+                            {project.name}
+                          </span>
+                          <span className="truncate font-mono text-[11px] text-text-faint">
+                            {project.id}
+                          </span>
+                        </Link>
 
-                      {/* Actions shown only for owned projects */}
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => openRenameDialog(project)}
-                          aria-label={`Rename ${project.name}`}
-                          title="Rename"
-                        >
-                          <Pencil className="h-3.5 w-3.5 text-text-muted hover:text-text-primary" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => openDeleteDialog(project)}
-                          aria-label={`Delete ${project.name}`}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-state-error/70 hover:text-state-error" />
-                        </Button>
+                        {/* Actions shown only for owned projects */}
+                        <div className="flex shrink-0 items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() =>
+                              openRenameDialog({
+                                id: project.id,
+                                name: project.name,
+                              })
+                            }
+                            aria-label={`Rename ${project.name}`}
+                            title="Rename"
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-text-muted hover:text-text-primary" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() =>
+                              openDeleteDialog({
+                                id: project.id,
+                                name: project.name,
+                              })
+                            }
+                            aria-label={`Delete ${project.name}`}
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-state-error/70 hover:text-state-error" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </TabsContent>
@@ -127,22 +163,39 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
                 </div>
               ) : (
                 <div className="flex flex-col gap-1">
-                  {sharedProjects.map((project) => (
-                    <div
-                      key={project.id}
-                      className="flex items-center justify-between rounded-lg px-2.5 py-2 text-sm transition-colors hover:bg-bg-subtle"
-                    >
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-xs font-medium text-text-primary">
-                          {project.name}
-                        </span>
-                        <span className="truncate font-mono text-[11px] text-text-faint">
-                          /{project.slug}
-                        </span>
+                  {sharedProjects.map((project) => {
+                    const isActive = pathname === `/editor/${project.id}`
+                    return (
+                      <div
+                        key={project.id}
+                        className={cn(
+                          "flex items-center justify-between rounded-lg px-2.5 py-2 text-sm transition-colors",
+                          isActive
+                            ? "bg-bg-subtle border border-border-default shadow-xs"
+                            : "hover:bg-bg-subtle"
+                        )}
+                      >
+                        <Link
+                          href={`/editor/${project.id}`}
+                          className="flex min-w-0 flex-1 flex-col hover:opacity-80 transition-opacity"
+                          onClick={onClose}
+                        >
+                          <span
+                            className={cn(
+                              "truncate text-xs font-medium",
+                              isActive ? "text-accent-primary" : "text-text-primary"
+                            )}
+                          >
+                            {project.name}
+                          </span>
+                          <span className="truncate font-mono text-[11px] text-text-faint">
+                            {project.id}
+                          </span>
+                        </Link>
+                        {/* Actions are hidden for shared/collaborator projects */}
                       </div>
-                      {/* Actions are hidden for shared/collaborator projects */}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </TabsContent>
