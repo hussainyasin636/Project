@@ -43,9 +43,11 @@ export function ProjectSidebar({
       <aside
         className={cn(
           "fixed left-0 top-12 z-30 flex h-[calc(100vh-3rem)] w-72 flex-col",
-          "bg-bg-surface border-r border-border-default",
-          "transition-transform duration-200 ease-in-out",
-          isOpen ? "translate-x-0" : "-translate-x-full",
+          "border-r border-border-default bg-bg-surface/95 backdrop-blur-md shadow-2xl",
+          "transition-all duration-300 ease-in-out",
+          isOpen
+            ? "translate-x-0 opacity-100 pointer-events-auto"
+            : "-translate-x-full opacity-0 pointer-events-none invisible",
           className
         )}
         aria-hidden={!isOpen}

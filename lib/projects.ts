@@ -46,8 +46,9 @@ export const getUserProjects = cache(async (): Promise<UserProjects> => {
         },
       })
     }
-  } catch (error) {
-    console.error("Failed to fetch shared projects:", error)
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.warn("Notice: Failed to fetch shared projects:", msg)
   }
 
   return {
