@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 04: Project Dialogs — Complete
+- Feature 05: Prisma — Complete
 
 ## Current Goal
 
@@ -16,6 +16,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - `02-editor`: Editor chrome shell components created — `components/editor/editor-navbar.tsx` (fixed-height top navbar with `PanelLeftOpen`/`PanelLeftClose` sidebar toggle, left/center/right sections, dark background with bottom border) and `components/editor/project-sidebar.tsx` (floating overlay sidebar that slides in from the left without pushing page content, accepts `isOpen`/`onClose` props, shadcn Tabs with My Projects + Shared tabs showing empty placeholder states, full-width New Project button with Plus icon at the bottom). Dialog pattern documented — use existing color tokens from `globals.css`; no actual dialogs built yet. All components compile with zero TypeScript errors.
 - `03-auth`: Clerk authentication wired into Next.js 16. `@clerk/ui` installed. `proxy.ts` at project root with protected-first strategy — all routes protected except `/sign-in` and `/sign-up`. Root layout wraps app with `ClerkProvider` using Clerk `dark` theme + CSS variable overrides (`colorPrimary`, `colorBackground`, `borderRadius`) — no hardcoded colors. Sign-in and sign-up pages created with two-panel layout (branding left, Clerk form right on large screens; form only on small screens). Root `/` redirects authenticated users to `/editor`, unauthenticated to `/sign-in`. `UserButton` added to editor navbar right section. App restructured with route groups: `(auth)` for sign-in/sign-up (no editor chrome), `(editor)` for editor pages (with EditorShell). `npm run build` passes.
 - `04-project-dialogues`: Built the `/editor` home screen and project dialogs/sidebar actions using mock data. Defined `types/project.ts` with project interface and initial mock data. Created `lib/slug.ts` with robust slug generation and validation (`SLUG_MIN_LENGTH`, `SLUG_MAX_LENGTH`, regex pattern, and duplicate check). Created `hooks/use-project-dialogs.tsx` managing dialog state, form state, live slug validation, and loading state via `ProjectDialogsProvider` and `useProjectDialogs`. Created `components/editor/project-dialogs.tsx` rendering Create Project (with live slug preview and validation error display), Rename Project (with prefilled name, current name in description, auto-focus, Enter submission, and scoped slug uniqueness check), and Delete Project (destructive confirmation only, no input, destructive button styling). Updated `components/editor/project-sidebar.tsx` to list mock projects, wired rename and delete actions for owned projects, hid actions for shared projects, wired create dialog to the New Project button, and added a mobile backdrop scrim to close the sidebar on tap. Updated `app/(editor)/editor/page.tsx` with a minimal centered layout (heading, description, and New Project button with Plus icon). `npm run build` and `npm run lint` pass with zero errors.
+- `05-prisma`: Implemented Prisma data models, cached client singleton, and initial database migration. Created `prisma/models/project.prisma` containing `ProjectStatus` enum (`DRAFT`, `ARCHIVED`), `Project` model (with `ownerId` mapped to Clerk user, `name`, optional `description`, `status`, optional `canvasJsonPath`, timestamps, and separate indexes on `ownerId` and `createdAt`), and `ProjectCollaborator` model (with relation to `Project` featuring `onDelete: Cascade`, `email`, `createdAt`, `@@unique([projectId, email])`, `@@index([email])`, and `@@index([projectId, createdAt])`). Created `lib/prisma.ts` as a cached singleton branching by `DATABASE_URL` (uses `accelerateUrl` when starting with `prisma+postgres://`, otherwise direct `@prisma/adapter-pg`), cached on `globalThis` in development. Generated Prisma client to `app/generated/prisma`. Executed migration `20261002114713_init` against PostgreSQL database. Verified live query connectivity and passed `npm run build` and `npm run lint`.
 
 ## In Progress
 
@@ -42,6 +43,8 @@ Update this file whenever the current phase, active feature, or implementation s
 - Project dialogs state, form state, and loading state are centralized in `useProjectDialogsState` and exposed via `ProjectDialogsProvider` in `hooks/use-project-dialogs.tsx` so all editor surfaces (page, sidebar, dialogs) share consistent state cleanly without prop drilling.
 - Slug validation is handled in `lib/slug.ts` and evaluated live: enforces 2-50 character length, lowercase alphanumeric + hyphen pattern (`/^[a-z0-9]+(?:-[a-z0-9]+)*$/`), and prevents collisions with existing slugs (with rename dialog properly scoping out the current project's own ID).
 - Sidebar mobile overlay uses a backdrop scrim behind the sidebar (`z-20`, `md:hidden`) to allow tap-to-dismiss without altering desktop floating overlay behavior.
+- Prisma 7 configuration uses multi-file schema resolution (`schema: "prisma/"` in `prisma7.config.ts`), with domain models modularized in `prisma/models/`.
+- Prisma client generation targets `app/generated/prisma`. Singleton client in `lib/prisma.ts` dynamically branches between Prisma Accelerate (`accelerateUrl`) and direct PostgreSQL connection pool (`@prisma/adapter-pg`).
 
 ## Session Notes
 
@@ -52,3 +55,4 @@ Update this file whenever the current phase, active feature, or implementation s
 - Mock projects differentiate owned vs shared projects (`isOwner` boolean).
 - Live slug generation dynamically converts names to kebab-case slugs as the user types.
 - Live slug validation provides instant feedback, sets `aria-invalid` on inputs, colors the preview red on errors, and blocks form submission for invalid or duplicate slugs.
+- Prisma migration `20261002114713_init` created and applied successfully to PostgreSQL database. Verified client connectivity and query execution.
