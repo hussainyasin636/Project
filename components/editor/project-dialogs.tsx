@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import {
   Dialog,
@@ -7,32 +7,35 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useProjectDialogs } from "@/hooks/use-project-dialogs";
-import { cn } from "@/lib/utils";
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { useProjectActions } from "@/hooks/use-project-actions"
 
 export function ProjectDialogs() {
   const {
-    dialogState,
-    formState,
-    slugValidation,
+    dialogType,
+    targetProject,
+    createName,
+    roomId,
+    renameName,
     isLoading,
+    error,
     closeDialog,
-    setFormName,
+    setCreateName,
+    setRenameName,
     handleCreateProject,
     handleRenameProject,
     handleDeleteProject,
-  } = useProjectDialogs();
+  } = useProjectActions()
 
   return (
     <>
       {/* Create Project Dialog */}
       <Dialog
-        open={dialogState.type === "create"}
+        open={dialogType === "create"}
         onOpenChange={(open) => {
-          if (!open) closeDialog();
+          if (!open) closeDialog()
         }}
       >
         <DialogContent className="sm:max-w-md">
@@ -53,31 +56,23 @@ export function ProjectDialogs() {
               </label>
               <Input
                 id="create-project-name"
-                value={formState.name}
-                onChange={(e) => setFormName(e.target.value)}
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
                 placeholder="e.g. Real-Time Chat Engine"
-                aria-invalid={Boolean(slugValidation.error)}
                 autoFocus
               />
 
               <div className="flex flex-col gap-1 pt-0.5">
                 <p className="text-xs text-text-muted">
-                  Slug preview:{" "}
-                  <span
-                    className={cn(
-                      "font-mono",
-                      slugValidation.error
-                        ? "text-state-error"
-                        : "text-accent-primary",
-                    )}
-                  >
-                    {formState.slug || "project-slug"}
+                  Room ID preview:{" "}
+                  <span className="font-mono text-accent-primary">
+                    {roomId}
                   </span>
                 </p>
 
-                {slugValidation.error && (
+                {error && (
                   <p className="text-xs text-state-error" role="alert">
-                    {slugValidation.error}
+                    {error}
                   </p>
                 )}
               </div>
@@ -94,7 +89,7 @@ export function ProjectDialogs() {
               </Button>
               <Button
                 type="submit"
-                disabled={!slugValidation.isValid || isLoading}
+                disabled={isLoading}
               >
                 {isLoading ? "Creating..." : "Create Project"}
               </Button>
@@ -105,16 +100,16 @@ export function ProjectDialogs() {
 
       {/* Rename Project Dialog */}
       <Dialog
-        open={dialogState.type === "rename"}
+        open={dialogType === "rename"}
         onOpenChange={(open) => {
-          if (!open) closeDialog();
+          if (!open) closeDialog()
         }}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Rename Project</DialogTitle>
             <DialogDescription>
-              Enter a new name for &quot;{dialogState.project?.name}&quot;.
+              Enter a new name for &quot;{targetProject?.name}&quot;.
             </DialogDescription>
           </DialogHeader>
 
@@ -128,34 +123,17 @@ export function ProjectDialogs() {
               </label>
               <Input
                 id="rename-project-name"
-                value={formState.name}
-                onChange={(e) => setFormName(e.target.value)}
+                value={renameName}
+                onChange={(e) => setRenameName(e.target.value)}
                 placeholder="Project name"
-                aria-invalid={Boolean(slugValidation.error)}
                 autoFocus
               />
 
-              <div className="flex flex-col gap-1 pt-0.5">
-                <p className="text-xs text-text-muted">
-                  Slug preview:{" "}
-                  <span
-                    className={cn(
-                      "font-mono",
-                      slugValidation.error
-                        ? "text-state-error"
-                        : "text-accent-primary",
-                    )}
-                  >
-                    {formState.slug || "project-slug"}
-                  </span>
+              {error && (
+                <p className="text-xs text-state-error" role="alert">
+                  {error}
                 </p>
-
-                {slugValidation.error && (
-                  <p className="text-xs text-state-error" role="alert">
-                    {slugValidation.error}
-                  </p>
-                )}
-              </div>
+              )}
             </div>
 
             <DialogFooter>
@@ -169,7 +147,7 @@ export function ProjectDialogs() {
               </Button>
               <Button
                 type="submit"
-                disabled={!slugValidation.isValid || isLoading}
+                disabled={!renameName.trim() || isLoading}
               >
                 {isLoading ? "Saving..." : "Rename"}
               </Button>
@@ -180,19 +158,25 @@ export function ProjectDialogs() {
 
       {/* Delete Project Dialog */}
       <Dialog
-        open={dialogState.type === "delete"}
+        open={dialogType === "delete"}
         onOpenChange={(open) => {
-          if (!open) closeDialog();
+          if (!open) closeDialog()
         }}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Project</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{dialogState.project?.name}
-              &quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{targetProject?.name}&quot;?
+              This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+
+          {error && (
+            <p className="text-xs text-state-error px-1" role="alert">
+              {error}
+            </p>
+          )}
 
           <DialogFooter>
             <Button
@@ -215,5 +199,5 @@ export function ProjectDialogs() {
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }

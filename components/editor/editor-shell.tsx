@@ -4,17 +4,24 @@ import { useState } from "react"
 import { EditorNavbar } from "@/components/editor/editor-navbar"
 import { ProjectSidebar } from "@/components/editor/project-sidebar"
 import { ProjectDialogs } from "@/components/editor/project-dialogs"
-import { ProjectDialogsProvider } from "@/hooks/use-project-dialogs"
+import { ProjectActionsProvider } from "@/hooks/use-project-actions"
+import type { Project } from "@/types/project"
 
 interface EditorShellProps {
   children: React.ReactNode
+  ownedProjects?: Project[]
+  sharedProjects?: Project[]
 }
 
-export function EditorShell({ children }: EditorShellProps) {
+export function EditorShell({
+  children,
+  ownedProjects = [],
+  sharedProjects = [],
+}: EditorShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   return (
-    <ProjectDialogsProvider>
+    <ProjectActionsProvider>
       <EditorNavbar
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
@@ -22,10 +29,12 @@ export function EditorShell({ children }: EditorShellProps) {
       <ProjectSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        ownedProjects={ownedProjects}
+        sharedProjects={sharedProjects}
       />
       {/* Offset for the fixed navbar */}
       <main className="pt-12">{children}</main>
       <ProjectDialogs />
-    </ProjectDialogsProvider>
+    </ProjectActionsProvider>
   )
 }
