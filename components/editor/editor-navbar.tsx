@@ -2,7 +2,7 @@
 
 import { useMemo } from "react"
 import { usePathname } from "next/navigation"
-import { PanelLeftClose, PanelLeftOpen, Share2, Sparkles } from "lucide-react"
+import { LayoutTemplate, PanelLeftClose, PanelLeftOpen, Share2, Sparkles } from "lucide-react"
 import { UserButton } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { useWorkspace } from "@/hooks/use-workspace"
@@ -92,6 +92,17 @@ export function EditorNavbar({
       <div className="flex items-center gap-2 shrink-0">
         {isWorkspace && (
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={workspace?.openTemplatesModal}
+              className="h-8 gap-1.5 px-3 text-xs border-border-default bg-bg-surface hover:bg-bg-subtle text-text-primary"
+              title="Load starter template"
+            >
+              <LayoutTemplate className="h-3.5 w-3.5 text-text-secondary" />
+              <span className="hidden sm:inline">Templates</span>
+            </Button>
+
             <Button
               variant="outline"
               size="sm"
