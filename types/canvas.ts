@@ -62,12 +62,20 @@ export const DEFAULT_NODE_COLOR = "#1F1F1F"
 export const DEFAULT_NODE_TEXT_COLOR = "#EDEDED"
 
 /**
- * Custom node data supporting label, color, and shape.
+ * Custom node data supporting label, color, textColor, and shape.
  */
 export interface CanvasNodeData extends Record<string, unknown> {
   label: string
   color?: string
+  textColor?: string
   shape?: NodeShape
+}
+
+/**
+ * Custom edge data supporting inline label.
+ */
+export interface CanvasEdgeData extends Record<string, unknown> {
+  label?: string
 }
 
 /**
@@ -83,4 +91,4 @@ export type CanvasEdgeType = typeof CANVAS_EDGE_TYPE
  * Shared Canvas Node and Edge types for React Flow.
  */
 export type CanvasNode = Node<CanvasNodeData, CanvasNodeType>
-export type CanvasEdge = Edge<Record<string, unknown>, CanvasEdgeType>
+export type CanvasEdge = Edge<CanvasEdgeData, CanvasEdgeType>

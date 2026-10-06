@@ -1,6 +1,7 @@
 "use client"
 
-import { ReactNode } from "react"
+import type { ReactNode } from "react"
+import { LiveObject, LiveMap, type LsonObject } from "@liveblocks/client"
 import {
   LiveblocksProvider,
   RoomProvider,
@@ -28,6 +29,12 @@ export function CanvasWrapper({ roomId, children }: CanvasWrapperProps) {
         initialPresence={{
           cursor: null,
           isThinking: false,
+        }}
+        initialStorage={{
+          flow: new LiveObject({
+            nodes: new LiveMap<string, LiveObject<LsonObject>>(),
+            edges: new LiveMap<string, LiveObject<LsonObject>>(),
+          }),
         }}
       >
         <ErrorBoundary

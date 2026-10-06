@@ -60,13 +60,19 @@ export const SHAPES_CONFIG: readonly ShapeConfig[] = [
 
 interface ShapePanelProps {
   onAddShape?: (shape: NodeShape) => void
+  onDragStartShape?: (shape: NodeShape) => void
+  onDragEndShape?: () => void
 }
 
 /**
  * Floating pill-shaped toolbar at the bottom-center of the canvas
  * providing draggable and clickable shape buttons.
  */
-export function ShapePanel({ onAddShape }: ShapePanelProps) {
+export function ShapePanel({
+  onAddShape,
+  onDragStartShape,
+  onDragEndShape,
+}: ShapePanelProps) {
   const handleDragStart = (
     event: DragEvent<HTMLDivElement>,
     shapeConfig: ShapeConfig
@@ -78,7 +84,22 @@ export function ShapePanel({ onAddShape }: ShapePanelProps) {
     event.dataTransfer.setData("application/reactflow", payload)
     event.dataTransfer.setData("application/json", payload)
     event.dataTransfer.setData("text/plain", shapeConfig.shape)
-    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.effectAllowed = "all"
+
+    try {
+      const img = new Image()
+      img.src =
+        "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+      event.dataTransfer.setDragImage(img, 0, 0)
+    } catch {
+      // Fallback if environment does not support custom drag image
+    }
+
+    onDragStartShape?.(shapeConfig.shape)
+  }
+
+  const handleDragEnd = () => {
+    onDragEndShape?.()
   }
 
   return (
@@ -96,6 +117,7 @@ export function ShapePanel({ onAddShape }: ShapePanelProps) {
             tabIndex={0}
             draggable
             onDragStart={(e) => handleDragStart(e, item)}
+            onDragEnd={handleDragEnd}
             onClick={() => onAddShape?.(item.shape)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {

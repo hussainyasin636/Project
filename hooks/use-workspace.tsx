@@ -13,6 +13,10 @@ export interface WorkspaceContextType {
   setIsShareDialogOpen: (open: boolean) => void
   openShareDialog: () => void
   closeShareDialog: () => void
+  isTemplatesModalOpen: boolean
+  setIsTemplatesModalOpen: (open: boolean) => void
+  openTemplatesModal: () => void
+  closeTemplatesModal: () => void
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null)
@@ -22,6 +26,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   // Default to true so the right AI sidebar placeholder is visible in the workspace shell out of the box
   const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(true)
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
+  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
 
   const toggleAiSidebar = useCallback(() => {
     setIsAiSidebarOpen((prev) => !prev)
@@ -33,6 +38,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const closeShareDialog = useCallback(() => {
     setIsShareDialogOpen(false)
+  }, [])
+
+  const openTemplatesModal = useCallback(() => {
+    setIsTemplatesModalOpen(true)
+  }, [])
+
+  const closeTemplatesModal = useCallback(() => {
+    setIsTemplatesModalOpen(false)
   }, [])
 
   return (
@@ -47,6 +60,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         setIsShareDialogOpen,
         openShareDialog,
         closeShareDialog,
+        isTemplatesModalOpen,
+        setIsTemplatesModalOpen,
+        openTemplatesModal,
+        closeTemplatesModal,
       }}
     >
       {children}

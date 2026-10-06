@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
-// Define Liveblocks types for your application
-// https://liveblocks.io/docs/api-reference/liveblocks-react#Typing-your-data
+import type { LiveObject, LiveMap, LsonObject } from "@liveblocks/client";
+
 declare global {
   interface Liveblocks {
     // Each user's Presence, for useMyPresence, useOthers, etc.
@@ -10,7 +10,12 @@ declare global {
     };
 
     // The Storage tree for the room, for useMutation, useStorage, etc.
-    Storage: {};
+    Storage: {
+      flow: LiveObject<{
+        nodes: LiveMap<string, LiveObject<LsonObject>>;
+        edges: LiveMap<string, LiveObject<LsonObject>>;
+      }>;
+    };
 
     // Custom user info set when authenticating with a secret key
     UserMeta: {

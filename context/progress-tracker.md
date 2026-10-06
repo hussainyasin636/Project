@@ -4,14 +4,53 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 12: Shape Panel & Node Creation — Complete
-- Canvas Visuals, Sidebars, and Drag-and-Drop Fixes (`context/current-issues.md`) — Complete
+- Feature 18: Starter Template Library — Complete
 
 ## Current Goal
 
-- Ready for the next feature specification (e.g. Node selection, custom rendering, or shape-specific visuals).
+- Ready for the next feature specification (e.g. Feature 19: AI Copilot / Assistant Integration or Export Features).
 
 ## Completed
+
+- `18-starter-template`: Implemented pre-built starter architecture templates library, modal with SVG previews, and collaborative canvas replacement (`context/feature-specs/18-starter-template.md`):
+  1. **Template library (`starter-templates.ts`)**: Defined `CanvasTemplate` interface and exported `CANVAS_TEMPLATES` containing 3 rich architectures:
+     - `microservices-architecture`: Cloud services with API gateway, auth, microservices, Redis caching, and persistent PostgreSQL database.
+     - `cicd-pipeline`: Automated build, test, container packaging, quality gate, and multi-stage deployment pipeline.
+     - `event-driven-system`: Pub/sub message broker (Kafka), asynchronous event consumers, streaming analytics, push dispatch, and cold storage archiving.
+     - Created reusable `createNode` and `createEdge` helper constructors mapping cleanly to shared canvas types (`CanvasNode`, `CanvasEdge`, `NodeShape`, and `NODE_COLORS`).
+  2. **Starter templates modal (`starter-templates-modal.tsx`)**: Created responsive shadcn Dialog displaying templates in a grid with:
+     - Lightweight SVG diagram preview: automatically calculates bounds from node coordinates, renders shape variants (`circle`, `diamond`, `hexagon`, `pill`, `rectangle`) with color fills, subtle borders, centered text labels, and dashed connecting lines between node centers without requiring a React Flow instance.
+     - Template metadata (name, description, node count, edge count).
+     - Import action button triggering canvas replacement and closing modal.
+  3. **Navbar integration (`editor-navbar.tsx`)**: Added a dedicated `Templates` button with `LayoutTemplate` icon to the editor navbar for workspaces, opening the templates dialog via `useWorkspace().openTemplatesModal()`.
+  4. **Canvas import & collaborative synchronization (`canvas.tsx`)**:
+     - Built `replaceCanvasWithTemplate` Liveblocks mutation that completely clears existing nodes and edges in collaborative CRDT storage (`flow.nodes` and `flow.edges`) and populates the template nodes and edges.
+     - Replaced local React Flow nodes and edges (`reactFlow.setNodes` and `reactFlow.setEdges`).
+     - Smoothly animated viewport fitting (`reactFlow.fitView({ duration: 400, padding: 0.2 })`).
+  5. Verified `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass with zero errors.
+
+- `17-canvas-ergonomics`: Implemented floating control bar, zoom, Liveblocks history undo/redo, keyboard shortcuts, and removed minimap (`context/feature-specs/17-canvas-ergonomics.md`):
+  1. **Floating control bar (`CanvasControlBar`)**: Created `components/canvas/canvas-control-bar.tsx` rendering a pill-shaped bar at the bottom-left of the canvas (`bottom-6 left-6 z-25 bg-bg-surface/90 border border-border-default rounded-full shadow-2xl backdrop-blur-md`). Divided into two groups separated by a thin vertical divider (`bg-border-default`):
+     - Zoom controls: Zoom out (`ZoomOut`), Fit view (`Maximize`), Zoom in (`ZoomIn`).
+     - History controls: Undo (`Undo2`), Redo (`Redo2`).
+  2. **Zoom integration**: Connected zoom controls to React Flow instance (`zoomIn`, `zoomOut`, `fitView`) with smooth 300ms animations (`{ duration: 300 }`).
+  3. **Liveblocks history**: Connected undo and redo to Liveblocks room history (`useUndo`, `useRedo`). Disabled and visually dimmed buttons (`opacity-30 cursor-not-allowed`) when `!canUndo` or `!canRedo` via `useCanUndo()` and `useCanRedo()`.
+  4. **Keyboard shortcuts (`useKeyboardShortcuts`)**: Created `hooks/useKeyboardShortcuts.ts` (and kebab-case alias `hooks/use-keyboard-shortcuts.ts`) listening for window keyboard events:
+     - Zoom in: `+` or `=` (with smooth 300ms animation).
+     - Zoom out: `-` or `_` (with smooth 300ms animation).
+     - Undo: `Cmd/Ctrl + Z`.
+     - Redo: `Cmd/Ctrl + Shift + Z` and `Cmd/Ctrl + Y`.
+     - Intelligently ignores all shortcuts when focus is inside text inputs, textareas, or contenteditable fields (e.g. node and edge label editing).
+  5. **Minimap removed**: Removed `<MiniMap>` and its import from `components/canvas/canvas.tsx`.
+  6. Verified `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass with zero errors.
+
+- `16-edge-behavior`: Implemented edge connections, right-angle routing, and inline edge labels (`context/feature-specs/16-edge-behavior.md`):
+  1. **Node connection handles**: Configured connection handles on all 4 sides (top, right, bottom, left) of every node with `ConnectionMode.Loose`, `isConnectableStart={true}`, and `isConnectableEnd={true}`, allowing connections between any two handles on the canvas. Styled handles as subtle white dots with dark borders (`bg-text-primary border-2 border-bg-base rounded-full`), hidden by default and smoothly fading in on node hover.
+  2. **Custom canvas edge renderer (`canvasEdge`)**: Created `components/canvas/canvas-edge.tsx` utilizing `getSmoothStepPath` for clean right-angle routing with rounded corners (`borderRadius={8}`), SVG `<marker>` arrowhead matching stroke color, stroke ends rounded (`strokeLinecap="round"`), and dimmed stroke at rest (`rgba(240, 240, 244, 0.45)`) brightening on hover (`#f0f0f4`) and highlighting in cyan when selected (`var(--accent-primary)`).
+  3. **Invisible wide interaction hitbox**: Layered an invisible preceding `<path>` with `strokeWidth={20}` and `stroke="transparent"` ahead of the visible line, enabling effortless mouse hover and click interactions without increasing the visible line thickness.
+  4. **Inline edge label editing**: Double-clicking an edge opens an inline label editor rendered via `EdgeLabelRenderer` and centered precisely using `labelX` and `labelY` coordinates from `getSmoothStepPath`. Utilizes an auto-growing input with mirror `<span>` matching the label styling. Saves on `blur`, `Enter`, or `Escape`. Displays saved labels as subtle pill badges (`bg-bg-surface/95 border border-border-default text-text-primary px-2 py-0.5 rounded-full text-xs shadow-md`). Shows a faint hint pill (`+ Add label`) when an edge is selected without a label. Configured `nodrag nopan` and event propagation isolation to prevent canvas panning/dragging while typing.
+  5. **Collaborative synchronization**: Defined `CanvasEdgeData` in `types/canvas.ts`, configured atomic edge label synchronization (`edges.sync: { "*": { label: "atomic" } }`) in `useLiveblocksFlow`, and updated `components/canvas/canvas.tsx` with default edge options and type casting to ensure all connections create `canvasEdge` instances synchronized across Liveblocks CRDT and React Flow.
+  6. Verified `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass with zero errors.
 
 - `01-design-system`: shadcn/ui installed and configured with Tailwind v4, lucide-react installed, `lib/utils.ts` created with `cn()` helper, all required UI components added (Button, Card, Dialog, Input, Tabs, Textarea, ScrollArea), `app/globals.css` configured with dark-only theme wired to project design tokens.
 - `02-editor`: Editor chrome shell components created — `components/editor/editor-navbar.tsx` (fixed-height top navbar with `PanelLeftOpen`/`PanelLeftClose` sidebar toggle, left/center/right sections, dark background with bottom border) and `components/editor/project-sidebar.tsx` (floating overlay sidebar that slides in from the left without pushing page content, accepts `isOpen`/`onClose` props, shadcn Tabs with My Projects + Shared tabs showing empty placeholder states, full-width New Project button with Plus icon at the bottom). Dialog pattern documented — use existing color tokens from `globals.css`; no actual dialogs built yet. All components compile with zero TypeScript errors.
@@ -81,5 +120,34 @@ Update this file whenever the current phase, active feature, or implementation s
 - Implemented `ShareDialog` and collaborator REST APIs (`/api/projects/[projectId]/collaborators` and `[collaboratorId]`) with Clerk Backend API enrichment, clipboard link copying with `Copied!` feedback, email invite validation, and role-based permissions.
 - Implemented Liveblocks setup: `liveblocks.config.ts`, `lib/liveblocks.ts`, and `POST /api/liveblocks-auth`.
 - Implemented base collaborative canvas: `types/canvas.ts`, `components/canvas/canvas-wrapper.tsx`, `components/canvas/canvas.tsx`, `components/canvas/canvas-loading.tsx`, `components/canvas/canvas-error.tsx`.
-- Implemented shape panel and drag-and-drop node creation: `components/canvas/shape-panel.tsx`, `components/canvas/canvas-node.tsx`, wired drop coordinate translation and `canvasNode` addition in `components/canvas/canvas.tsx`.
+- Implemented shape panel and drag-and-drop node creation (`context/feature-specs/12-shape-panel.md`):
+  1. Floating pill-shaped toolbar at bottom-center of canvas (`components/canvas/shape-panel.tsx`) with draggable icon buttons for all 6 shapes (`rectangle`, `diamond`, `circle`, `pill`, `cylinder`, `hexagon`).
+  2. Drag payload serialization in `handleDragStart` including shape and default dimensions (`rectangle`: 160x80 wider than tall, `circle`: 90x90 square, `diamond`: 130x130 slightly larger for labels, `pill`: 150x60, `cylinder`: 120x90, `hexagon`: 130x90) with multi-format dataTransfer support (`application/reactflow`, `application/json`, `text/plain`) and `effectAllowed = "all"`.
+  3. Dragover and drop handling in canvas (`components/canvas/canvas.tsx`): converts screen coordinates to canvas space using `useReactFlow().screenToFlowPosition`, generates unique node ID (`${shape}-${Date.now()}-${counter}`), and creates new node with empty label, default node color (`#1F1F1F`), and dragged shape.
+  4. Real-time Liveblocks CRDT synchronization: typed `Storage` in `liveblocks.config.ts`, configured `initialStorage` in `components/canvas/canvas-wrapper.tsx`, configured `nodes.sync: { "*": { label: "atomic", color: "atomic", shape: "atomic" } }` in `useLiveblocksFlow`, and used `addNodeToStorage` mutation with `position: "atomic"` and `data: "atomic"` alongside React Flow change dispatching.
+  5. Basic custom node renderer (`components/canvas/canvas-node.tsx`) rendering every shape as a simple bordered rectangle with centered label and 4 connection handles per Feature 12 unit specifications.
+- `13-node-shape`: Implemented proper shape rendering and ghost drag preview (`context/feature-specs/13-node-shape.md`):
+  1. Replaced placeholder node renderer in `components/canvas/canvas-node.tsx` with proper shape variants for all 6 shapes (`rectangle`, `diamond`, `circle`, `pill`, `cylinder`, `hexagon`).
+  2. CSS styling for `rectangle` (`rounded-xl`), `pill` (`rounded-full`), and `circle` (`rounded-full aspect-square`).
+  3. SVG shapes for `diamond` (polygon), `hexagon` (symmetric horizontal polygon), and `cylinder` (isometric body path and 3D top cap ellipse) using dynamic `width` and `height` dimensions with `vectorEffect="non-scaling-stroke"`, scaling with node size.
+  4. Subtle borders at rest (`--border-default`) and highlighted/glowing borders when selected (`--accent-primary` with glow drop-shadow and thicker stroke/ring). Connection handles at Top, Right, Bottom, and Left appear on node hover. Text labels centered inside node with text color mapped from `NODE_COLORS`.
+  5. Shape drag preview (`components/canvas/shape-drag-preview.tsx`): when dragging from the shape panel, displays a ghost preview attached to the cursor matching the shape variant and default size with semi-transparent fill and dashed accent stroke/border. Automatically cleaned up upon drop or drag cancellation.
+  6. Connected node rendering directly to existing collaborative Liveblocks CRDT and React Flow state.
+- `14-node-editing`: Implemented node resizing and inline label editing (`context/feature-specs/14-node-editing.md`):
+  1. Integrated `@xyflow/react` `NodeResizer` in `components/canvas/canvas-node.tsx`, displayed when node is selected, with dark canvas styled handles (`!w-2 !h-2 !bg-bg-elevated !border !border-accent-primary !rounded-xs`) and subtle lines (`!border-accent-primary/60`).
+  2. Minimum node dimensions enforced (`minWidth={shape === "circle" ? 60 : 70}`, `minHeight={shape === "circle" ? 60 : 40}`) and aspect ratio preserved for circles (`keepAspectRatio={shape === "circle"}`).
+  3. Node resizing updates dimensions through the existing `@liveblocks/react-flow` and React Flow sync flow (`case "dimensions"` with `setAttributes: true`).
+  4. Implemented inline label editing: double-clicking a node or label area opens a centered `<textarea>` directly over the label with matching font styling, padding, and zero layout shift.
+  5. Shows centered placeholder text (`"Empty node"`) when label is empty.
+  6. Real-time typing synchronization via local draft state, React Flow `updateNodeData`, and Liveblocks `updateNodeLabel` CRDT storage mutation.
+  7. Closes editing on `blur`, `Escape`, or `Enter` (without Shift).
+  8. Configured `nodrag nopan select-text` classes and stopped event propagation on pointer/mouse/key events to prevent text editing interactions from dragging or panning the canvas or triggering canvas hotkeys.
+- `15-nodes-color-toolbar`: Implemented floating color toolbar for selected nodes (`context/feature-specs/15-nodes-color-toolbar.md`):
+  1. Integrated `@xyflow/react` `NodeToolbar` positioned above selected nodes with `offset={12}` and dark glass styling (`bg-bg-surface/95 border border-border-default rounded-full shadow-2xl backdrop-blur-md`).
+  2. Rendered interactive color swatches for all 8 predefined background/text color pairs from `NODE_COLORS` in `types/canvas.ts`.
+  3. Active swatches display clear selection state (`scale-110 border-white ring-2 ring-white/80 ring-offset-1` with center indicator dot in paired text color).
+  4. Hovering a swatch displays a tight, controlled glow based on its paired text color (`boxShadow: 0 0 8px 1px ${colorPair.text}90`).
+  5. Configured `nodrag nopan` and stopped event propagation on swatch interactions to prevent node dragging or canvas panning.
+  6. Selecting a swatch immediately updates both background and paired text color in the local React Flow state (`updateNodeData`) and synchronizes across collaborators via Liveblocks CRDT storage mutation (`updateNodeColor`).
+  7. Added `textColor?: string` to `CanvasNodeData` in `types/canvas.ts` and configured atomic synchronization (`textColor: "atomic"`) in `components/canvas/canvas.tsx`.
 - Verified `npm run build` and `npm run lint` pass with zero errors.
