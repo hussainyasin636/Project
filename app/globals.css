@@ -126,3 +126,10 @@
     @apply font-sans;
   }
 }
+
+/* React Flow selection marquee styling */
+.react-flow__selection {
+  background: rgba(0, 200, 212, 0.08) !important;
+  border: 1px dashed rgba(0, 200, 212, 0.6) !important;
+  border-radius: 4px;
+}

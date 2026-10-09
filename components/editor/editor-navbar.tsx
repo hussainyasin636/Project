@@ -2,10 +2,21 @@
 
 import { useMemo } from "react"
 import { usePathname } from "next/navigation"
-import { LayoutTemplate, PanelLeftClose, PanelLeftOpen, Share2, Sparkles } from "lucide-react"
+import {
+  AlertCircle,
+  Check,
+  LayoutTemplate,
+  Loader2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Save,
+  Share2,
+  Sparkles,
+} from "lucide-react"
 import { UserButton } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { useWorkspace } from "@/hooks/use-workspace"
+import { PresenceAvatars } from "@/components/editor/presence-avatars"
 import { cn } from "@/lib/utils"
 import type { Project } from "@/types/project"
 
@@ -88,10 +99,55 @@ export function EditorNavbar({
       {/* Center section */}
       <div className="flex flex-1 items-center justify-center px-2" />
 
-      {/* Right section: Workspace actions + UserButton */}
+      {/* Right section: Workspace actions + Presence avatars + UserButton */}
       <div className="flex items-center gap-2 shrink-0">
         {isWorkspace && (
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void workspace?.triggerSave()
+              }}
+              disabled={workspace?.saveStatus === "saving"}
+              className={cn(
+                "h-8 gap-1.5 px-2.5 sm:px-3 text-xs border-border-default bg-bg-surface hover:bg-bg-subtle text-text-primary transition-colors",
+                workspace?.saveStatus === "error" &&
+                  "border-state-error/60 text-state-error hover:bg-state-error/10"
+              )}
+              title={
+                workspace?.saveStatus === "saving"
+                  ? "Saving canvas..."
+                  : workspace?.saveStatus === "saved"
+                  ? "Canvas saved"
+                  : workspace?.saveStatus === "error"
+                  ? "Save error — click to retry"
+                  : "Save canvas"
+              }
+            >
+              {workspace?.saveStatus === "saving" ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-text-muted" />
+                  <span className="hidden sm:inline text-text-muted">Saving...</span>
+                </>
+              ) : workspace?.saveStatus === "saved" ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-state-success" />
+                  <span className="hidden sm:inline text-text-secondary">Saved</span>
+                </>
+              ) : workspace?.saveStatus === "error" ? (
+                <>
+                  <AlertCircle className="h-3.5 w-3.5 text-state-error" />
+                  <span className="hidden sm:inline text-state-error">Error</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-3.5 w-3.5 text-text-secondary" />
+                  <span className="hidden sm:inline">Save</span>
+                </>
+              )}
+            </Button>
+
             <Button
               variant="outline"
               size="sm"
@@ -131,10 +187,14 @@ export function EditorNavbar({
             >
               <Sparkles className="h-4 w-4" />
             </Button>
+
+            {/* Collaborator Avatars group */}
+            <PresenceAvatars />
           </>
         )}
 
-        <UserButton />
+        {/* UserButton rendered only on editor home navbar, removed from workspace navbar */}
+        {!isWorkspace && <UserButton />}
       </div>
     </header>
   )

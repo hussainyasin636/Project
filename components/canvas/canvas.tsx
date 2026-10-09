@@ -14,17 +14,23 @@ import {
   Background,
   BackgroundVariant,
   ConnectionMode,
+  SelectionMode,
   useReactFlow,
+  useNodes,
+  useEdges,
+  getConnectedEdges,
   type NodeAddChange,
   type Connection,
 } from "@xyflow/react"
-import { useLiveblocksFlow, Cursors } from "@liveblocks/react-flow"
+import { useLiveblocksFlow } from "@liveblocks/react-flow"
 import {
   useMutation,
   useUndo,
   useRedo,
   useCanUndo,
   useCanRedo,
+  useUpdateMyPresence,
+  useRoom,
 } from "@liveblocks/react/suspense"
 import { LiveObject, LiveMap, type JsonObject } from "@liveblocks/client"
 import { CanvasNodeRenderer } from "@/components/canvas/canvas-node"
@@ -32,10 +38,12 @@ import { CanvasEdgeRenderer } from "@/components/canvas/canvas-edge"
 import { ShapePanel } from "@/components/canvas/shape-panel"
 import { ShapeDragPreview } from "@/components/canvas/shape-drag-preview"
 import { CanvasControlBar } from "@/components/canvas/canvas-control-bar"
+import { LiveCursors } from "@/components/canvas/live-cursors"
 import { StarterTemplatesModal } from "@/components/editor/starter-templates-modal"
 import type { CanvasTemplate } from "@/components/editor/starter-templates"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts"
+import { useCanvasAutosave } from "@/hooks/use-canvas-autosave"
 import type { CanvasNode, CanvasEdge, NodeShape } from "@/types/canvas"
 import {
   DEFAULT_NODE_COLOR,
@@ -54,16 +62,48 @@ function generateNodeId(shape: string): string {
   return `${shape}-${Date.now()}-${nodeCounter}`
 }
 
-function CanvasFlow() {
+function CanvasFlow({ projectId }: { projectId?: string } = {}) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlow = useReactFlow()
   const { screenToFlowPosition } = reactFlow
+  const room = useRoom()
+  const workspace = useWorkspace()
+
+  const effectiveProjectId = projectId || room?.id || workspace?.activeProject?.id
 
   const undo = useUndo()
   const redo = useRedo()
   const canUndo = useCanUndo()
   const canRedo = useCanRedo()
-  const workspace = useWorkspace()
+  const updateMyPresence = useUpdateMyPresence()
+
+  // Broadcast cursor position on React Flow mouse movement
+  const handleMouseMove = useCallback(
+    (event: React.MouseEvent) => {
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
+      updateMyPresence({ cursor: position })
+    },
+    [screenToFlowPosition, updateMyPresence]
+  )
+
+  // Clear cursor position on mouse leave or window blur
+  const handleMouseLeave = useCallback(() => {
+    updateMyPresence({ cursor: null })
+  }, [updateMyPresence])
+
+  useEffect(() => {
+    const handleBlur = () => {
+      updateMyPresence({ cursor: null })
+    }
+    window.addEventListener("blur", handleBlur)
+    return () => {
+      window.removeEventListener("blur", handleBlur)
+      updateMyPresence({ cursor: null })
+    }
+  }, [updateMyPresence])
 
   // Wire canvas zoom and history shortcuts (skips editable inputs/textareas)
   useKeyboardShortcuts({
@@ -107,6 +147,74 @@ function CanvasFlow() {
       },
     },
   })
+
+  // Get current nodes and edges with their selection states
+  const rfNodes = useNodes<CanvasNode>()
+  const rfEdges = useEdges<CanvasEdge>()
+
+  // Delete selected nodes and edges via Liveblocks collaborative mutation helper
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) {
+        return
+      }
+
+      if (event.key !== "Delete" && event.key !== "Backspace") {
+        return
+      }
+
+      const target = event.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable ||
+          target.closest?.(
+            "input, textarea, select, [contenteditable='true'], [role='textbox']"
+          ))
+      ) {
+        return
+      }
+
+      const selectedNodes = rfNodes.filter((node) => Boolean(node.selected))
+      const selectedEdges = rfEdges.filter((edge) => Boolean(edge.selected))
+
+      if (selectedNodes.length === 0 && selectedEdges.length === 0) {
+        return
+      }
+
+      event.preventDefault()
+
+      // Include all edges connected to the selected nodes
+      const connectedEdges = getConnectedEdges(selectedNodes, rfEdges)
+      const edgeMap = new Map<string, CanvasEdge>()
+      for (const edge of selectedEdges) {
+        edgeMap.set(edge.id, edge)
+      }
+      for (const edge of connectedEdges) {
+        edgeMap.set(edge.id, edge)
+      }
+      const allEdgesToDelete = Array.from(edgeMap.values())
+
+      onDelete({
+        nodes: selectedNodes,
+        edges: allEdgesToDelete,
+      })
+    }
+
+    const wrapper = reactFlowWrapper.current
+    if (wrapper) {
+      wrapper.addEventListener("keydown", handleKeyDown)
+    }
+    window.addEventListener("keydown", handleKeyDown)
+
+    return () => {
+      if (wrapper) {
+        wrapper.removeEventListener("keydown", handleKeyDown)
+      }
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [rfNodes, rfEdges, onDelete])
 
   // Liveblocks mutation ensuring flow and nodes exist and store with atomic position and data
   const addNodeToStorage = useMutation(({ storage }, newNode: CanvasNode) => {
@@ -219,6 +327,166 @@ function CanvasFlow() {
     [replaceCanvasWithTemplate, reactFlow]
   )
 
+  // Liveblocks mutation to load saved canvas from blob storage into room
+  const loadSavedCanvas = useMutation(
+    ({ storage }, savedNodes: CanvasNode[], savedEdges: CanvasEdge[]) => {
+      let flow = storage.get("flow")
+      if (!flow) {
+        flow = new LiveObject({
+          nodes: new LiveMap(),
+          edges: new LiveMap(),
+        })
+        storage.set("flow", flow)
+      }
+
+      let nodesMap = flow.get("nodes")
+      if (!nodesMap) {
+        nodesMap = new LiveMap()
+        flow.set("nodes", nodesMap)
+      }
+
+      // Check to ensure we do not overwrite active collaboration if nodes appeared
+      if (nodesMap.size > 0) {
+        return
+      }
+
+      let edgesMap = flow.get("edges")
+      if (!edgesMap) {
+        edgesMap = new LiveMap()
+        flow.set("edges", edgesMap)
+      }
+
+      for (const node of savedNodes) {
+        nodesMap.set(
+          node.id,
+          LiveObject.from(node as unknown as JsonObject, {
+            position: "atomic",
+            sourcePosition: "atomic",
+            targetPosition: "atomic",
+            extent: "atomic",
+            origin: "atomic",
+            handles: "atomic",
+            data: "atomic",
+          })
+        )
+      }
+
+      for (const edge of savedEdges) {
+        edgesMap.set(
+          edge.id,
+          LiveObject.from(edge as unknown as JsonObject, {
+            data: "atomic",
+          })
+        )
+      }
+    },
+    []
+  )
+
+  const [hasCheckedSavedState, setHasCheckedSavedState] = useState(
+    () => nodes.length > 0 || edges.length > 0
+  )
+  const hasCheckedRoomRef = useRef(false)
+
+  // Initialize autosave hook
+  const { saveStatus, saveNow, markAsSaved } = useCanvasAutosave({
+    projectId: effectiveProjectId,
+    nodes,
+    edges,
+    debounceMs: 2000,
+    enabled: hasCheckedSavedState,
+  })
+
+  const setSaveStatus = workspace?.setSaveStatus
+  // Synchronize autosave status with workspace context for EditorNavbar Save button
+  useEffect(() => {
+    if (setSaveStatus) {
+      setSaveStatus(saveStatus)
+    }
+  }, [saveStatus, setSaveStatus])
+
+  const setOnSave = workspace?.setOnSave
+  // Register manual save handler in workspace context
+  useEffect(() => {
+    if (setOnSave) {
+      setOnSave(saveNow)
+    }
+    return () => {
+      if (setOnSave) {
+        setOnSave(undefined)
+      }
+    }
+  }, [saveNow, setOnSave])
+
+  // Initial load check: load saved canvas state if room is empty
+  useEffect(() => {
+    // If already checked or room is not empty, skip the load entirely to avoid overwriting active collaboration
+    if (hasCheckedRoomRef.current || hasCheckedSavedState || !effectiveProjectId) {
+      return
+    }
+
+    if (nodes.length > 0 || edges.length > 0) {
+      hasCheckedRoomRef.current = true
+      return
+    }
+
+    hasCheckedRoomRef.current = true
+    let isCancelled = false
+
+    async function loadSavedState() {
+      try {
+        const res = await fetch(`/api/projects/${effectiveProjectId}/canvas`)
+        if (!res.ok) {
+          return
+        }
+        const data = await res.json()
+        if (isCancelled) return
+
+        const savedNodes: CanvasNode[] = data.nodes || []
+        const savedEdges: CanvasEdge[] = data.edges || []
+
+        if (savedNodes.length === 0 && savedEdges.length === 0) {
+          return
+        }
+
+        // Secondary safety check: did another collaborator add nodes while we were fetching?
+        if (nodes.length > 0 || edges.length > 0) {
+          return
+        }
+
+        // Populate Liveblocks CRDT storage and React Flow state
+        loadSavedCanvas(savedNodes, savedEdges)
+        reactFlow.setNodes(savedNodes)
+        reactFlow.setEdges(savedEdges)
+        markAsSaved(savedNodes, savedEdges)
+
+        setTimeout(() => {
+          reactFlow.fitView({ duration: 400, padding: 0.2 })
+        }, 50)
+      } catch (err) {
+        console.warn("[Canvas] Error loading saved canvas state:", err)
+      } finally {
+        if (!isCancelled) {
+          setHasCheckedSavedState(true)
+        }
+      }
+    }
+
+    void loadSavedState()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [
+    effectiveProjectId,
+    hasCheckedSavedState,
+    nodes,
+    edges,
+    loadSavedCanvas,
+    reactFlow,
+    markAsSaved,
+  ])
+
   const nodeTypes = useMemo(
     () => ({
       canvasNode: CanvasNodeRenderer,
@@ -283,6 +551,7 @@ function CanvasFlow() {
   const handleDrop = useCallback(
     (event: DragEvent) => {
       event.preventDefault()
+      event.stopPropagation()
       setDraggedShape(null)
       setDragCursor(null)
 
@@ -334,6 +603,10 @@ function CanvasFlow() {
           x: Math.round(position.x - size.width / 2),
           y: Math.round(position.y - size.height / 2),
         },
+        style: {
+          width: size.width,
+          height: size.height,
+        },
         data: {
           label: "",
           color: DEFAULT_NODE_COLOR,
@@ -381,6 +654,10 @@ function CanvasFlow() {
           x: Math.round(position.x - size.width / 2),
           y: Math.round(position.y - size.height / 2),
         },
+        style: {
+          width: size.width,
+          height: size.height,
+        },
         data: {
           label: "",
           color: DEFAULT_NODE_COLOR,
@@ -408,7 +685,8 @@ function CanvasFlow() {
   return (
     <div
       ref={reactFlowWrapper}
-      className="relative h-full w-full overflow-hidden bg-bg-base select-none"
+      tabIndex={0}
+      className="relative h-full w-full overflow-hidden bg-bg-base select-none outline-none focus:outline-none"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -425,10 +703,12 @@ function CanvasFlow() {
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onDelete={onDelete}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
+        deleteKeyCode={null}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
         connectionMode={ConnectionMode.Loose}
-        fitView
+        selectionMode={SelectionMode.Partial}
+        multiSelectionKeyCode={["Meta", "Control"]}
         colorMode="dark"
         className="h-full w-full bg-bg-base"
         proOptions={{ hideAttribution: true }}
@@ -440,7 +720,7 @@ function CanvasFlow() {
           color="#2a2a30"
           className="bg-bg-base"
         />
-        <Cursors />
+        <LiveCursors />
       </ReactFlow>
 
       {/* Floating control bar for zoom and history at bottom-left */}
@@ -473,10 +753,10 @@ function CanvasFlow() {
   )
 }
 
-export function Canvas() {
+export function Canvas({ projectId }: { projectId?: string } = {}) {
   return (
     <ReactFlowProvider>
-      <CanvasFlow />
+      <CanvasFlow projectId={projectId} />
     </ReactFlowProvider>
   )
 }

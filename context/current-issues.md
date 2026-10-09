@@ -1,42 +1,103 @@
-Review the editor canvas implementation and fix the visual issues. The canvas currently looks like it's floating above the background inside a border box, instead of feeling like a real design canvas. Check `/context/screenshots/image.png` for the current broken state.
+Review the editor workspace implementation and fix the following
+issues. Check `components/editor` first. Do not break existing
+features.
 
-Read the current canvas component code in `components/editor`
+## Issues
+### 2. Delete Nodes and Edges
 
-Issues to look for and document:
+Read Liveblocks agent skills before implementing this.
+Then read the canvas wrapper component and the existing
+node and edge mutation helpers.
 
-DRAG AND DROP ISSUES:
+Selected nodes and edges cannot be deleted from the canvas.
 
- - Canvas nodes from the node panel cannot be dragged and dropped onto the canvas. Investigate and fix the full drag-and-drop pipeline:
-  - Confirm that draggable nodes in the node panel have the correct draggable attribute and onDragStart handler that sets the node type in dataTransfer
-  - Confirm that the canvas has onDragOver (with preventDefault to allow dropping) and onDrop handlers wired up correctly
-  - Ensure the drop handler reads the node type from dataTransfer, calculates the correct canvas coordinates accounting for pan offset and zoom scale, and creates a new node at the dropped position
-  - Check that no parent element is intercepting or blocking the drag events before they reach the canvas
+Add a keydown event listener to the canvas wrapper that:
 
-CANVAS VISUAL ISSUES:
+- listens for Delete and Backspace keys
+- does not fire when the event target is an input, textarea,
+  or contenteditable element
+- gets currently selected nodes using useNodes() filtered
+  by selected state
+- gets currently selected edges using useEdges() filtered
+  by selected state
+- removes them using the existing Liveblocks collaborative
+  mutation helpers
 
-- Box shadow or elevation styles making the canvas appear to float
-- Border or border-radius giving it a "card" appearance instead of a canvas feel
-- Background color mismatch between canvas and its container
-- Missing or incorrect dotted background pattern on the canvas
-- z-index or positioning (absolute/relative) causing the floating effect
-- Padding/margin around the canvas creating separation from the background
-- Any wrapper div styles (like rounded corners, shadows, or elevated backgrounds) treating the canvas as a UI card
+Do not use React Flow's built-in deleteKeyCode or any
+React Flow keyboard deletion behavior. All deletions must
+go through the existing Liveblocks collaborative state so
+they sync across all connected clients in real time.
 
-SIDEBAR ISSUES:
+Do not change anything else.
 
-- The left and right sidebars should float OVER the canvas, not push or shrink it
-- Sidebars must use position: fixed or position: absolute with a higher z-index so the canvas extends fully behind them
-- The canvas background (dotted pattern) should be visible edge-to-edge underneath both sidebars
-- Sidebars should have a semi-transparent or solid background with a subtle shadow so they feel elevated above the canvas, not embedded in the layout
-- The left sidebar is not fully hiding when toggled off
+### 3. Node Connection Handles
 
-— it is partially visible or peeking out instead of sliding completely off-screen. When closed, the sidebar should translate fully outside the viewport with no visible remnant. Check for incorrect transform: translateX values, insufficient negative offset, overflow issues on the parent container, or missing overflow: hidden that is causing the sidebar to remain partially visible during or after the close transition.
+Read Liveblocks agent skills before implementing this.
 
-After documenting all issues fix all of the above so that:
+Nodes can only be connected from the top handle. All four
+handles — top, right, bottom, left — should be active and
+connectable. Check the existing Handle components in the
+custom node renderer. Verify each handle has the correct
+position prop and that no CSS is hiding or disabling the
+non-top handles. Connection between any two handles on any
+two nodes should work and sync through the existing
+Liveblocks edge state.
 
-1. The canvas has a dotted background pattern filling the full viewport naturally
-2. The canvas feels flush with the surrounding background — no floating, no card effect
-3. Box-shadow, excessive borders, and elevated styling are removed from the canvas
-4. The canvas looks and feels like an infinite design canvas (similar to Figma or Excalidraw)
-5. Both sidebars float over the canvas and are fully hidden when toggled off
-6. Nodes can be dragged from the node panel and dropped onto the canvas correctly
+### 4. Drag and Drop Position Offset
+
+Read Liveblocks agent skills before implementing this.
+
+When dropping a shape from the shape panel onto the canvas,
+the node places below where the cursor actually is.
+
+Check the drop handler in the canvas wrapper. The position
+calculation must account for:
+
+- the drag offset from where the user grabbed the shape
+  inside the drag element, not just the element's top-left
+  corner
+- the canvas container's bounding rect
+- the current React Flow pan offset and zoom scale via
+  screenToFlowPosition or project
+
+The node should appear with its center at the exact cursor
+position on drop.
+
+### 5. Auto Zoom on First Node Drop
+
+Read Liveblocks agent skills before implementing this.
+
+Dropping the first node onto a fully empty canvas causes an
+automatic zoom-in. This does not happen when other nodes
+exist. Check the drop handler and any fitView or fitBounds
+calls that may be triggered after the first node is added.
+Disable or guard any automatic fit/zoom behavior so it does
+not fire during a drop event. The viewport should stay
+exactly where the user left it after dropping a node.
+
+### 6. Collaborator Avatar Image Error
+
+Check Clerk agent skills before implementing this.
+
+Add img.clerk.com to the allowed image hostnames in
+next.config.js using the correct remotePatterns
+configuration.
+
+### 7. Remove UserButton from Workspace Navbar
+
+Check Clerk agent skills before implementing this.
+
+Remove the UserButton from the workspace navbar only. The
+navbar is shared so make sure the UserButton remains on the
+editor home navbar. Conditionally render it based on whether
+the component is being used in the workspace context or the
+editor home context.
+
+## Scope
+
+- Fix only what is listed above
+- Do not change canvas node or edge rendering behavior
+- Do not modify the editor home navbar layout
+- Do not break existing autosave, presence, or collaboration
+  logic
+- npm run build passes

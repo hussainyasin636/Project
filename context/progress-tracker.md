@@ -4,13 +4,113 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 18: Starter Template Library — Complete
+- Current Issues Resolution (`context/current-issues.md`) — Complete
 
 ## Current Goal
 
-- Ready for the next feature specification (e.g. Feature 19: AI Copilot / Assistant Integration or Export Features).
+- Ready for the next feature specification (e.g. AI Diagram Generation or Spec Export).
 
 ## Completed
+
+- `current-issues`: Resolved all 6 workspace editor issues documented in `context/current-issues.md`:
+  1. **Issue 2: Collaborative node and edge deletion (`components/canvas/canvas.tsx`)**:
+     - Added keydown event listener to canvas wrapper and window listening for `Delete` and `Backspace` keys.
+     - Early-exits when the active event target is an `input`, `textarea`, `select`, or `contenteditable` / textbox element.
+     - Retrieves currently selected nodes using `useNodes()` filtered by `node.selected` and currently selected edges using `useEdges()` filtered by `edge.selected`.
+     - Automatically resolves all connected edges for selected nodes via `@xyflow/react`'s `getConnectedEdges`.
+     - Deletes nodes and all associated edges via Liveblocks collaborative mutation helper (`onDelete({ nodes, edges })`), ensuring real-time synchronized deletion across all connected participants.
+     - Configured `deleteKeyCode={null}` on `<ReactFlow>` to disable built-in non-collaborative keyboard deletion.
+  2. **Issue 3: Node connection handles (`components/canvas/canvas-node.tsx`)**:
+     - Enabled all 4 connection handles (`Position.Top`, `Position.Right`, `Position.Bottom`, `Position.Left`) with explicit `isConnectable={isConnectable}`, `isConnectableStart={true}`, and `isConnectableEnd={true}`.
+     - Added `pointer-events-auto cursor-crosshair` with `z-10` above shape bodies ensuring handles on all sides are immediately hoverable and connectable.
+     - Verified handle IDs (`top`, `right`, `bottom`, `left`) match edge definitions and sync across Liveblocks edges.
+  3. **Issue 4: Drag and drop position offset (`components/canvas/canvas.tsx`)**:
+     - Updated `handleDrop` to accurately calculate canvas coordinates via `screenToFlowPosition({ x: event.clientX, y: event.clientY })`.
+     - Places the node center at the exact drop cursor position (`position.x - size.width / 2`, `position.y - size.height / 2`).
+     - Added explicit `style: { width: size.width, height: size.height }` to newly created node objects so React Flow and handle bounds have exact dimensions from the initial render.
+     - Added `event.stopPropagation()` and removed duplicate `onDrop` from `<ReactFlow>` to prevent redundant drop execution.
+  4. **Issue 5: Auto-zoom on first node drop (`components/canvas/canvas.tsx`)**:
+     - Removed automatic `fitView` prop from `<ReactFlow>`, preventing viewport jump and auto-zoom when the first node is dropped onto an empty canvas.
+     - Viewport stays exactly where the user left it. Retained smooth animated `fitView` calls for template imports and saved project hydration.
+  5. **Issue 6: Collaborator avatar image error (`next.config.ts`)**:
+     - Added `img.clerk.com` to `images.remotePatterns` with `protocol: "https"` in `next.config.ts`.
+  6. **Issue 7: Remove UserButton from workspace navbar (`components/editor/editor-navbar.tsx`)**:
+     - Conditionally rendered `<UserButton />` only when `!isWorkspace`, keeping it on the editor home navbar (`/editor`) while removing it from the workspace navbar (`/editor/[roomId]`).
+     - Removed trailing divider after collaborator avatars in workspace view.
+  7. **Multi-node box selection & marquee enhancement (`components/canvas/canvas.tsx` & `app/globals.css`)**:
+     - Configured `selectionMode={SelectionMode.Partial}` and `multiSelectionKeyCode={["Meta", "Control"]}` on `<ReactFlow>`.
+     - Users can drag a selection box across multiple nodes (by holding `Shift` + dragging the mouse across the canvas) or `Ctrl`/`Cmd` + click individual nodes.
+     - Styled the React Flow selection marquee box in `app/globals.css` with a translucent cyan fill (`rgba(0, 200, 212, 0.08)`) and dashed cyan border matching the project dark theme.
+     - Pressing `Delete` or `Backspace` deletes all selected nodes and their connected edges collaboratively in one transaction.
+  8. **Validation**: Verified `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass with zero errors.
+
+- `21-canvas-autosave`: Implemented debounced canvas autosave, Vercel Blob storage, Prisma metadata persistence, empty-room initial loading, and navbar save status indicator (`context/feature-specs/21-canvas-autosave.md`):
+  1. **Package installation**: Installed `@vercel/blob` to handle canvas snapshot artifact uploads.
+  2. **Schema verification (`prisma/models/project.prisma`)**: Verified `canvasJsonPath` on `Project` model stores the returned Vercel Blob URL reference while keeping Prisma responsible for relational metadata only.
+  3. **Canvas API routes (`app/api/projects/[projectId]/canvas/route.ts`)**:
+     - `PUT`: Authenticates user, verifies project access (owner or collaborator), uploads `{ nodes, edges }` JSON snapshot to Vercel Blob (`canvas/{projectId}.json`) with `addRandomSuffix: false` and `allowOverwrite: true` to modify the existing blob in-place without creating duplicate files, cleans up legacy suffix-based blobs, and updates `canvasJsonPath` on the Prisma `Project` record.
+     - `GET`: Authenticates user, verifies project access, retrieves `canvasJsonPath` from Prisma, fetches the JSON state using `@vercel/blob`'s authenticated `get()` (for private stores) or standard fetch (for public/local stores), and returns `{ nodes, edges, url }`.
+  4. **Autosave hook (`hooks/use-canvas-autosave.ts`)**:
+     - Created `useCanvasAutosave` hook watching canvas nodes and edges.
+     - Strips ephemeral selection/dragging properties to only trigger saves on structural/visual changes.
+     - Debounces network writes by 2000ms.
+     - Intelligently pauses and delays autosave execution while a user is actively typing in a textarea or input (`document.activeElement?.tagName === "TEXTAREA" | "INPUT"`), triggers save promptly 600ms after input blur, and chains a follow-up save if edits occur while a save request is already in-flight.
+     - Tracks save status: `"idle" | "saving" | "saved" | "error"`.
+     - Exposes manual `saveNow()` trigger and `markAsSaved()` for server hydration sync.
+     - Created alias exports in `hooks/useCanvasAutosave.ts` and `hook/use-canvas-autosave.ts`.
+  5. **Typing ergonomics & canvas re-render isolation (`canvas-node.tsx`, `workspace-shell.tsx`, `use-workspace.tsx`)**:
+     - Updated inline label editing in `components/canvas/canvas-node.tsx` to maintain fast local draft editing while typing and commit to React Flow and Liveblocks CRDT only on blur or Enter, matching `canvas-edge.tsx`. Set selection range to end of text on focus instead of selecting all text.
+     - Memoized `<CanvasWrapper roomId={project.id} />` in `components/editor/workspace-shell.tsx` and wrapped `CanvasWrapper` with `React.memo` to ensure the Liveblocks canvas never re-renders or unmounts when navbar save status or workspace sidebar changes.
+     - Memoized `WorkspaceContext` value and used `useRef` for `onSaveHandler` in `hooks/use-workspace.tsx` to prevent cascading render loops during autosave.
+  6. **Empty-room initial loading & collaboration preservation (`components/canvas/canvas.tsx`)**:
+     - On editor load, checks if the Liveblocks room has existing nodes or edges.
+     - If the room already has nodes or edges, skips server loading entirely to prevent overwriting active collaboration.
+     - If the room is empty and the project has a saved canvas blob URL, fetches saved state, populates Liveblocks CRDT storage (`loadSavedCanvas` mutation) and React Flow state, and smoothly fits view.
+     - Autosave is gated until initial room inspection completes, preventing saving empty state over existing blobs.
+  7. **Save status indicator in editor navbar (`components/editor/editor-navbar.tsx` & `hooks/use-workspace.tsx`)**:
+     - Added `saveStatus`, `setSaveStatus`, `setOnSave`, and `triggerSave` to `WorkspaceContext`.
+     - Added Save button in the editor navbar displaying dynamic status indicators:
+       - Saving: spinning `Loader2` icon and `Saving...` label.
+       - Saved: green `Check` icon (`text-state-success`) and `Saved` label.
+       - Error: red `AlertCircle` icon (`text-state-error`) and `Error` label (clickable to retry).
+       - Idle: `Save` icon and `Save` label.
+     - Clicking the Save button triggers manual immediate save.
+  8. Verified `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass with zero errors and zero warnings.
+
+- `20-ai-sidebar-shell`: Completed AI sidebar shell and separated into dedicated component (`context/feature-specs/20-ai-sidebar-shell.md`):
+  1. **Component separation (`ai-sidebar.tsx`)**: Created `components/editor/ai-sidebar.tsx` preserving floating position (`fixed right-0 top-12 z-30 w-80 md:w-88`), background (`bg-bg-surface/95 backdrop-blur-md`), borders (`border-l border-border-default`), shadow (`shadow-2xl`), and slide-in transition (`translate-x-0` / `translate-x-full duration-300`). Wired into `WorkspaceShell`.
+  2. **Sidebar header**: Rendered header with title `AI Workspace` (`text-text-primary text-sm font-semibold`), subtitle `Collaborate with Ghost AI` (`text-text-muted text-xs`), bot icon badge, and close button aligned to the right.
+  3. **Two-tab layout**: Implemented shadcn `Tabs` with `AI Architect` and `Specs` tabs, styled with `bg-accent-ai` active tab highlights and muted inactive tab labels.
+  4. **AI Architect tab**:
+     - Scrollable chat area with responsive message list.
+     - Empty state with bot icon, description, and 3 starter prompt chips (`Design an e-commerce backend`, `Create a chat app architecture`, `Build a CI/CD pipeline`) styled as soft pills (`bg-bg-subtle border border-border-default text-accent-ai-text`).
+     - Distinct chat bubble styling: user messages right-aligned with `bg-accent-primary-dim border-2 border-accent-primary/50 text-text-primary`, assistant messages left-aligned with `bg-bg-elevated border border-border-default text-text-primary`.
+     - Sticky bottom input area with auto-resizing textarea (72px min, 160px max), send button (`bg-accent-ai text-white`), Enter-to-submit, and Shift+Enter for newlines.
+  5. **Specs tab**:
+     - Rendered `Generate Spec` action button using `bg-accent-ai text-white`.
+     - Demo spec card (`bg-bg-elevated border border-border-default`) with `FileText` icon, title, description snippet, and disabled download button.
+  6. Verified `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass with zero errors and zero warnings.
+
+- `19-presence-avatars-cursor`: Implemented collaborative presence avatars and live multiplayer cursors (`context/feature-specs/19-presence-avatars-cursor.md`):
+  1. **Shared presence type (`liveblocks.config.ts`)**: Configured `cursor` (`{ x: number; y: number } | null`) and `thinking: boolean` (along with `isThinking?: boolean`) in Liveblocks Presence. Updated `CanvasWrapper` with default `thinking: false`.
+  2. **Collaborative presence sync (`presence-sync.tsx` & `use-workspace.tsx`)**: Created `PresenceSync` component inside `CanvasWrapper` room provider syncing active room participants into `WorkspaceContext` without triggering unnecessary re-renders on high-frequency cursor movements.
+  3. **Participant avatar group (`presence-avatars.tsx`)**: Created display-only `PresenceAvatars` component:
+     - Automatically resolves current user identity from Clerk session (`useUser().user?.id`) and strictly excludes current user from the collaborator avatars list.
+     - Displays profile photos when available, falling back to uppercase name initials.
+     - Overlapping stack of up to 5 collaborator avatars with subtle ring (`ring-2 ring-bg-surface`) for high contrast on the dark canvas.
+     - Displays `+N` overflow badge chip when more than 5 collaborators are present.
+     - Sized to match Clerk UserButton (`h-7 w-7 sm:h-8 sm:w-8`).
+  4. **Navbar integration & home preservation (`editor-navbar.tsx`)**:
+     - Positioned presence avatars in the top-right corner of the editor canvas view alongside the Clerk UserButton, visually separated from main workspace actions.
+     - Shows a thin divider between collaborator avatars and `UserButton` ONLY when at least one collaborator exists.
+     - When no collaborators are present, renders only `UserButton` with no divider.
+     - Completely preserves editor home navbar (`isWorkspace = false`) so no presence UI or dividers appear on the home screen.
+  5. **Collaborative live cursors (`live-cursors.tsx` & `canvas.tsx`)**:
+     - Wired `onMouseMove` on React Flow to broadcast cursor coordinates via `updateMyPresence({ cursor: screenToFlowPosition(...) })`.
+     - Wired `onMouseLeave` and window `blur` to clear cursor position to `null`.
+     - Created `LiveCursors` rendering colored pointer SVG and name badge pill for other participants only, matching each participant's presence color (`other.info?.color`).
+     - Fully isolated with `pointer-events-none` so live cursors never block canvas interactions.
+  6. Verified `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass with zero errors and zero warnings.
 
 - `18-starter-template`: Implemented pre-built starter architecture templates library, modal with SVG previews, and collaborative canvas replacement (`context/feature-specs/18-starter-template.md`):
   1. **Template library (`starter-templates.ts`)**: Defined `CanvasTemplate` interface and exported `CANVAS_TEMPLATES` containing 3 rich architectures:
