@@ -193,12 +193,10 @@ npx trigger.dev@latest dev
 │   ├── editor/                # Editor home and canvas room route pages
 │   ├── generated/prisma/      # Generated Prisma client and models
 │   ├── sign-in/               # Clerk sign-in page
-│   └── sign-up/               # Clerk sign-up page
 ├── components/
 │   ├── canvas/                # React Flow canvas, custom nodes, edges, cursors
 │   ├── editor/                # Shell layout, navbar, project sidebar, AI sidebar, modals
 │   └── ui/                    # Reusable shadcn/ui components
-├── context/                   # Architecture and technical context specifications
 ├── hooks/                     # Custom hooks (workspace, project actions, autosave)
 ├── lib/                       # Core utilities (Prisma client, Liveblocks, spec storage)
 ├── prisma/                    # Prisma configuration and multi-file schema models
