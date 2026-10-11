@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -753,10 +754,14 @@ function CanvasFlow({ projectId }: { projectId?: string } = {}) {
   )
 }
 
-export function Canvas({ projectId }: { projectId?: string } = {}) {
+export const Canvas = memo(function Canvas({
+  projectId,
+}: {
+  projectId?: string
+} = {}) {
   return (
     <ReactFlowProvider>
       <CanvasFlow projectId={projectId} />
     </ReactFlowProvider>
   )
-}
+})

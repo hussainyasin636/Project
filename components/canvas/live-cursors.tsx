@@ -2,6 +2,7 @@
 
 import { useOthers } from "@liveblocks/react/suspense"
 import { useViewport } from "@xyflow/react"
+import { Loader2 } from "lucide-react"
 
 /**
  * Renders collaborative live cursors for other participants on the canvas.
@@ -40,6 +41,9 @@ export function LiveCursors() {
 
         const screenX = cursor.x * zoom + panX
         const screenY = cursor.y * zoom + panY
+        const isThinking = Boolean(
+          other.presence?.thinking || other.presence?.isThinking
+        )
 
         return (
           <div
@@ -70,10 +74,16 @@ export function LiveCursors() {
 
             {/* Attached Name Badge */}
             <div
-              className="ml-1.5 mt-2 px-1.5 py-0.5 rounded-md text-[11px] font-medium text-white shadow-md whitespace-nowrap select-none"
+              className="ml-1.5 mt-2 px-1.5 py-0.5 rounded-md text-[11px] font-medium text-white shadow-md whitespace-nowrap select-none flex items-center gap-1"
               style={{ backgroundColor: color }}
             >
-              {name}
+              <span>{name}</span>
+              {isThinking && (
+                <Loader2
+                  className="h-3 w-3 animate-spin text-white shrink-0"
+                  aria-label="Thinking"
+                />
+              )}
             </div>
           </div>
         )

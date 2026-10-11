@@ -58,6 +58,17 @@ export async function POST(req: Request) {
         ownerId: project.ownerId,
       },
     })
+    // Ensure the shared AI status feed and room chat feed exist for this room
+    try {
+      await liveblocks.createFeed({ roomId, feedId: "ai-status-feed" })
+    } catch {
+      // Non-fatal if feed already exists
+    }
+    try {
+      await liveblocks.createFeed({ roomId, feedId: "ai-chat" })
+    } catch {
+      // Non-fatal if feed already exists
+    }
   } catch (roomErr) {
     // Non-fatal if room already exists or in development without live API key
     console.warn(`[Liveblocks] getOrCreateRoom notice for room ${roomId}:`, roomErr)

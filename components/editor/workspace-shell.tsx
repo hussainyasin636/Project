@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { ShareDialog } from "@/components/editor/share-dialog"
 import { CanvasWrapper } from "@/components/canvas/canvas-wrapper"
+import { Canvas } from "@/components/canvas/canvas"
 import { AiSidebar } from "@/components/editor/ai-sidebar"
 import type { Project } from "@/types/project"
 
@@ -33,31 +34,35 @@ export function WorkspaceShell({
     }
   }, [project, setActiveProject])
 
-  // Memoize CanvasWrapper so it never re-renders when sidebar toggles or saveStatus changes
+  // Memoize Canvas so it never re-renders when sidebar toggles or saveStatus changes
   const canvasElement = useMemo(
-    () => <CanvasWrapper roomId={project.id} />,
+    () => <Canvas projectId={project.id} />,
     [project.id]
   )
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-bg-base">
-      {/* Infinite Canvas: Edge-to-edge background filling the full viewport naturally */}
-      <main className="absolute inset-0 h-full w-full overflow-hidden bg-bg-base">
-        {canvasElement}
-      </main>
+    <CanvasWrapper roomId={project.id}>
+      <div className="relative h-full w-full overflow-hidden bg-bg-base">
+        {/* Infinite Canvas: Edge-to-edge background filling the full viewport naturally */}
+        <main className="absolute inset-0 h-full w-full overflow-hidden bg-bg-base">
+          {canvasElement}
+        </main>
 
-      {/* Right AI Sidebar: Floating overlay over canvas */}
-      <AiSidebar
-        isOpen={Boolean(workspace?.isAiSidebarOpen)}
-        onClose={workspace?.toggleAiSidebar ?? (() => {})}
-      />
+        {/* Right AI Sidebar: Floating overlay over canvas */}
+        <AiSidebar
+          isOpen={Boolean(workspace?.isAiSidebarOpen)}
+          onClose={workspace?.toggleAiSidebar ?? (() => {})}
+          roomId={project.id}
+          projectId={project.id}
+        />
 
-      {/* Share Dialog */}
-      <ShareDialog
-        project={project}
-        isOwner={isOwner}
-        isCollaborator={isCollaborator}
-      />
-    </div>
+        {/* Share Dialog */}
+        <ShareDialog
+          project={project}
+          isOwner={isOwner}
+          isCollaborator={isCollaborator}
+        />
+      </div>
+    </CanvasWrapper>
   )
 }

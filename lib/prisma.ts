@@ -28,11 +28,36 @@ function createPrismaClient(): PrismaClient {
   return new PrismaClient({ adapter })
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient()
+function getPrismaClient(): PrismaClient {
+  // In development, Next.js HMR preserves globalThis across module reloads.
+  // If models were added to schema (like projectSpec), ensure the cached instance is not stale.
+  if (
+    globalForPrisma.prisma &&
+    "projectSpec" in globalForPrisma.prisma &&
+    "taskRun" in globalForPrisma.prisma
+  ) {
+    return globalForPrisma.prisma
+  }
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma
+  const client = createPrismaClient()
+  if (process.env.NODE_ENV !== "production") {
+    globalForPrisma.prisma = client
+  }
+  return client
 }
 
+// In development, Next.js module caching can preserve a stale PrismaClient on globalThis.
+// A Proxy guarantees that any model access auto-refreshes if newer models were generated.
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    const client = getPrismaClient()
+    const value = Reflect.get(client, prop, receiver)
+    if (typeof value === "function") {
+      return value.bind(client)
+    }
+    return value
+  },
+})
+
 export { PrismaClient }
-export type { Project, ProjectCollaborator, ProjectStatus } from "@/app/generated/prisma/client"
+export type { Project, ProjectCollaborator, ProjectStatus, TaskRun, ProjectSpec } from "@/app/generated/prisma/client"

@@ -18,6 +18,13 @@ export interface PresenceCollaborator {
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error"
 
+export interface AiActivityStatus {
+  status: "idle" | "start" | "processing" | "complete" | "error"
+  message: string
+  summary?: string
+  timestamp: number
+}
+
 export interface WorkspaceContextType {
   activeProject: Project | null
   setActiveProject: (project: Project | null) => void
@@ -38,6 +45,8 @@ export interface WorkspaceContextType {
   setSaveStatus: (status: SaveStatus) => void
   setOnSave: (handler: (() => Promise<void>) | undefined) => void
   triggerSave: () => Promise<void>
+  aiActivity: AiActivityStatus | null
+  setAiActivity: (activity: AiActivityStatus | null) => void
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null)
@@ -50,6 +59,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
   const [collaborators, setCollaborators] = useState<PresenceCollaborator[]>([])
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
+  const [aiActivity, setAiActivity] = useState<AiActivityStatus | null>(null)
   const onSaveHandlerRef = useRef<(() => Promise<void>) | undefined>(undefined)
 
   const toggleAiSidebar = useCallback(() => {
@@ -103,6 +113,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setSaveStatus,
       setOnSave,
       triggerSave,
+      aiActivity,
+      setAiActivity,
     }),
     [
       activeProject,
@@ -124,6 +136,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setSaveStatus,
       setOnSave,
       triggerSave,
+      aiActivity,
+      setAiActivity,
     ]
   )
 

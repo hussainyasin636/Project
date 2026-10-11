@@ -193,8 +193,8 @@ export function EditorNavbar({
           </>
         )}
 
-        {/* UserButton rendered only on editor home navbar, removed from workspace navbar */}
-        {!isWorkspace && <UserButton />}
+        {/* UserButton (user profile, account settings, and Sign Out) */}
+        <UserButton />
       </div>
     </header>
   )
