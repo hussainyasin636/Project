@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { X, Plus, Pencil, Trash2 } from "lucide-react"
+import { X, Plus, Pencil, Trash2, LogOut } from "lucide-react"
+import { useClerk } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useProjectActions } from "@/hooks/use-project-actions"
@@ -25,6 +26,7 @@ export function ProjectSidebar({
   className,
 }: ProjectSidebarProps) {
   const pathname = usePathname()
+  const { signOut } = useClerk()
   const { openCreateDialog, openRenameDialog, openDeleteDialog } =
     useProjectActions()
 
@@ -204,8 +206,8 @@ export function ProjectSidebar({
           </Tabs>
         </div>
 
-        {/* Footer — New Project button */}
-        <div className="border-t border-border-default p-3">
+        {/* Footer — New Project & Sign Out buttons */}
+        <div className="border-t border-border-default p-3 flex flex-col gap-2">
           <Button
             variant="default"
             className="w-full gap-2"
@@ -213,6 +215,16 @@ export function ProjectSidebar({
           >
             <Plus className="h-4 w-4" />
             New Project
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-text-secondary hover:text-state-error hover:bg-state-error/10 text-xs transition-colors"
+            onClick={() => void signOut({ redirectUrl: "/sign-in" })}
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign Out
           </Button>
         </div>
       </aside>

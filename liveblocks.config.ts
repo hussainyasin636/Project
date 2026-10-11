@@ -6,7 +6,8 @@ declare global {
     // Each user's Presence, for useMyPresence, useOthers, etc.
     Presence: {
       cursor: { x: number; y: number } | null;
-      isThinking: boolean;
+      thinking: boolean;
+      isThinking?: boolean;
     };
 
     // The Storage tree for the room, for useMutation, useStorage, etc.
@@ -31,7 +32,50 @@ declare global {
     };
 
     // Custom events, for useBroadcastEvent, useEventListener
-    RoomEvent: {};
+    RoomEvent:
+      | {
+          type: "AI_STATUS";
+          status: "start" | "processing" | "complete" | "error";
+          message: string;
+          summary?: string;
+          timestamp: number;
+        }
+      | {
+          type: "ai-status-feed";
+          status?: "idle" | "start" | "thinking" | "processing" | "complete" | "error";
+          text?: string;
+          message?: string;
+          summary?: string;
+          taskType?: "design" | "spec" | "general";
+          timestamp?: number;
+        };
+
+    // Custom metadata set on feeds, for useFeeds, useCreateFeed, etc.
+    FeedMetadata: {
+      name?: string;
+    };
+
+    // Custom data set on feed messages, for useFeedMessages, useCreateFeedMessage, etc.
+    FeedMessageData: {
+      status?: "idle" | "start" | "thinking" | "processing" | "complete" | "error";
+      text?: string;
+      message?: string;
+      summary?: string;
+      taskType?: "design" | "spec" | "general";
+      timestamp?: number;
+      userId?: string;
+      // Chat message fields
+      sender?:
+        | string
+        | {
+            id?: string;
+            name: string;
+            avatar?: string;
+            color?: string;
+          };
+      role?: "user" | "assistant" | "system";
+      content?: string;
+    };
 
     // Custom metadata set on threads, for useThreads, useCreateThread, etc.
     ThreadMetadata: {};

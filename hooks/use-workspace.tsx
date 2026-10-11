@@ -1,7 +1,29 @@
 "use client"
 
-import React, { createContext, useContext, useState, useCallback } from "react"
+import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from "react"
 import type { Project } from "@/types/project"
+
+export interface PresenceCollaborator {
+  connectionId: number
+  id: string
+  info?: {
+    name?: string
+    displayName?: string
+    avatar?: string
+    avatarUrl?: string
+    color?: string
+    cursorColor?: string
+  }
+}
+
+export type SaveStatus = "idle" | "saving" | "saved" | "error"
+
+export interface AiActivityStatus {
+  status: "idle" | "start" | "processing" | "complete" | "error"
+  message: string
+  summary?: string
+  timestamp: number
+}
 
 export interface WorkspaceContextType {
   activeProject: Project | null
@@ -17,6 +39,14 @@ export interface WorkspaceContextType {
   setIsTemplatesModalOpen: (open: boolean) => void
   openTemplatesModal: () => void
   closeTemplatesModal: () => void
+  collaborators: PresenceCollaborator[]
+  setCollaborators: (collaborators: PresenceCollaborator[]) => void
+  saveStatus: SaveStatus
+  setSaveStatus: (status: SaveStatus) => void
+  setOnSave: (handler: (() => Promise<void>) | undefined) => void
+  triggerSave: () => Promise<void>
+  aiActivity: AiActivityStatus | null
+  setAiActivity: (activity: AiActivityStatus | null) => void
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null)
@@ -27,6 +57,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(true)
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
+  const [collaborators, setCollaborators] = useState<PresenceCollaborator[]>([])
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
+  const [aiActivity, setAiActivity] = useState<AiActivityStatus | null>(null)
+  const onSaveHandlerRef = useRef<(() => Promise<void>) | undefined>(undefined)
 
   const toggleAiSidebar = useCallback(() => {
     setIsAiSidebarOpen((prev) => !prev)
@@ -48,24 +82,67 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setIsTemplatesModalOpen(false)
   }, [])
 
+  const setOnSave = useCallback((handler: (() => Promise<void>) | undefined) => {
+    onSaveHandlerRef.current = handler
+  }, [])
+
+  const triggerSave = useCallback(async () => {
+    if (onSaveHandlerRef.current) {
+      await onSaveHandlerRef.current()
+    }
+  }, [])
+
+  const contextValue = useMemo(
+    () => ({
+      activeProject,
+      setActiveProject,
+      isAiSidebarOpen,
+      setIsAiSidebarOpen,
+      toggleAiSidebar,
+      isShareDialogOpen,
+      setIsShareDialogOpen,
+      openShareDialog,
+      closeShareDialog,
+      isTemplatesModalOpen,
+      setIsTemplatesModalOpen,
+      openTemplatesModal,
+      closeTemplatesModal,
+      collaborators,
+      setCollaborators,
+      saveStatus,
+      setSaveStatus,
+      setOnSave,
+      triggerSave,
+      aiActivity,
+      setAiActivity,
+    }),
+    [
+      activeProject,
+      setActiveProject,
+      isAiSidebarOpen,
+      setIsAiSidebarOpen,
+      toggleAiSidebar,
+      isShareDialogOpen,
+      setIsShareDialogOpen,
+      openShareDialog,
+      closeShareDialog,
+      isTemplatesModalOpen,
+      setIsTemplatesModalOpen,
+      openTemplatesModal,
+      closeTemplatesModal,
+      collaborators,
+      setCollaborators,
+      saveStatus,
+      setSaveStatus,
+      setOnSave,
+      triggerSave,
+      aiActivity,
+      setAiActivity,
+    ]
+  )
+
   return (
-    <WorkspaceContext.Provider
-      value={{
-        activeProject,
-        setActiveProject,
-        isAiSidebarOpen,
-        setIsAiSidebarOpen,
-        toggleAiSidebar,
-        isShareDialogOpen,
-        setIsShareDialogOpen,
-        openShareDialog,
-        closeShareDialog,
-        isTemplatesModalOpen,
-        setIsTemplatesModalOpen,
-        openTemplatesModal,
-        closeTemplatesModal,
-      }}
-    >
+    <WorkspaceContext.Provider value={contextValue}>
       {children}
     </WorkspaceContext.Provider>
   )

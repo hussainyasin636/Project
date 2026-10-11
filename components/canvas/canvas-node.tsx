@@ -155,6 +155,7 @@ function CanvasNodeComponent({
   selected,
   width,
   height,
+  isConnectable = true,
 }: NodeProps<CanvasNode>) {
   const { updateNodeData } = useReactFlow()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -258,7 +259,8 @@ function CanvasNodeComponent({
   useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus()
-      textareaRef.current.select()
+      const len = textareaRef.current.value.length
+      textareaRef.current.setSelectionRange(len, len)
       textareaRef.current.style.height = "auto"
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
     }
@@ -278,20 +280,15 @@ function CanvasNodeComponent({
       textareaRef.current.style.height = "auto"
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
     }
-
-    try {
-      updateNodeData(id, { label: nextVal })
-    } catch {}
-
-    try {
-      updateNodeLabel(nextVal)
-    } catch {}
   }
 
   const handleBlur = () => {
     setIsEditing(false)
     try {
       updateNodeData(id, { label: draftLabel })
+    } catch {}
+
+    try {
       updateNodeLabel(draftLabel)
     } catch {}
   }
@@ -300,10 +297,12 @@ function CanvasNodeComponent({
     e.stopPropagation()
     if (e.key === "Escape") {
       e.preventDefault()
+      // Discard changes
+      setDraftLabel(label)
       setIsEditing(false)
     } else if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
-      setIsEditing(false)
+      handleBlur()
     }
   }
 
@@ -364,33 +363,37 @@ function CanvasNodeComponent({
         type="source"
         position={Position.Top}
         id="top"
+        isConnectable={isConnectable}
         isConnectableStart={true}
         isConnectableEnd={true}
-        className="!h-2.5 !w-2.5 !border-2 !border-bg-base !bg-white opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 z-10"
+        className="!h-2.5 !w-2.5 !border-2 !border-bg-base !bg-white opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 z-10 pointer-events-auto cursor-crosshair"
       />
       <Handle
         type="source"
         position={Position.Right}
         id="right"
+        isConnectable={isConnectable}
         isConnectableStart={true}
         isConnectableEnd={true}
-        className="!h-2.5 !w-2.5 !border-2 !border-bg-base !bg-white opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 z-10"
+        className="!h-2.5 !w-2.5 !border-2 !border-bg-base !bg-white opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 z-10 pointer-events-auto cursor-crosshair"
       />
       <Handle
         type="source"
         position={Position.Bottom}
         id="bottom"
+        isConnectable={isConnectable}
         isConnectableStart={true}
         isConnectableEnd={true}
-        className="!h-2.5 !w-2.5 !border-2 !border-bg-base !bg-white opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 z-10"
+        className="!h-2.5 !w-2.5 !border-2 !border-bg-base !bg-white opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 z-10 pointer-events-auto cursor-crosshair"
       />
       <Handle
         type="source"
         position={Position.Left}
         id="left"
+        isConnectable={isConnectable}
         isConnectableStart={true}
         isConnectableEnd={true}
-        className="!h-2.5 !w-2.5 !border-2 !border-bg-base !bg-white opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 z-10"
+        className="!h-2.5 !w-2.5 !border-2 !border-bg-base !bg-white opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 z-10 pointer-events-auto cursor-crosshair"
       />
 
       {/* 1. CSS Shapes: rectangle */}
